@@ -19,92 +19,67 @@
 
 
 function rasterize_line( va, vb, emit_fragment ) {
-	console.log("START");
 	var dx = vb.x - va.x;
-	if (dx < 0){
-		var tmp = va;
-		va = vb;
-		vb = tmp;
-		dx = vb.x - va.x;
-	}
-	
 	var dy = vb.y - va.y;
 
-	var y = va.y;
-
 	var slope = dy / dx;
-
 	var cumulative_error = 0;
-
-	console.log("dx: ", dx);
-	console.log("dy: ", dy);
-
-	if (slope > 1 || slope < -1){
-
+	var iteratingStart;
+	var iteratingEnd;
+	var adjustingVariable;
+	var iteratingX;
+	if (slope > 1 || slope < -1) {
 		if (dy < 0){
+			var tmp = va;
+			va = vb;
+			vb = tmp;
+
+			dx = vb.x - va.x;
+			dy = vb.y - va.y;
+		}
+		slope = dx / dy;
+
+		iteratingStart = va.y;
+		iteratingEnd = vb.y;
+		adjustingVariable = va.x;
+		iteratingX = false;
+	}
+	else{
+		if (dx < 0){
 			var tmp = va;
 			va = vb;
 			vb = tmp;
 			dx = vb.x - va.x;
 			dy = vb.y - va.y;
+			slope = dy / dx;
+		}
+
+		iteratingStart = va.x;
+		iteratingEnd = vb.x;
+		adjustingVariable = va.y;
+		iteratingX = true;
+	}
+
+	for(var current = iteratingStart; current < iteratingEnd; current++){
+		if (cumulative_error > 0.5 || cumulative_error < -0.5){
+			
+			if (cumulative_error > 0){
+				adjustingVariable++;
+				cumulative_error -= 1;
+			}
+			else {
+				adjustingVariable--;
+				cumulative_error += 1;
+			}
 		}
 		
-		var x = va.x;
-		slope = dx / dy;
-		console.log("slope:", slope);
-		for(var y = va.y; y < vb.y; y++){
-			console.log("x, y: ", x, y);
-			console.log("cumulative_error: ", cumulative_error);
-			if (cumulative_error > 0.5 || cumulative_error < -0.5){
-				
-				if (cumulative_error > 0){
-					x++;
-					cumulative_error -= 1;
-					console.log("increase X: ", x)
-				}
-				else {
-					x--;
-					cumulative_error += 1;
-					console.log("decrease X: ", x)
-				}
-			}
-			
-			const px = {
-				x:Math.floor(x),
-				y:Math.floor(y)
-			};
-			emit_fragment(px.x+0.5, px.y+0.5);
+		const px = {
+			x: iteratingX ? Math.floor(current) : Math.floor(adjustingVariable),
+			y: iteratingX ? Math.floor(adjustingVariable) : Math.floor(current)
+		};
+		emit_fragment(px.x+0.5, px.y+0.5);
 
-			cumulative_error += slope;
-		}
-
-	}
-	else{
-		console.log("slope:", slope);
-		for(var x = va.x; x < vb.x; x++){
-			console.log("x: ", x);
-			console.log("y: ", y);
-			console.log("cumulative_error: ", cumulative_error);
-			if (cumulative_error > 0.5 || cumulative_error < -0.5){
-				
-				if (cumulative_error > 0){
-					y++;
-					cumulative_error -= 1;
-				}
-				else {
-					y--;
-					cumulative_error += 1;
-				}
-			}
-			
-			const px = {
-				x:Math.floor(x),
-				y:Math.floor(y)
-			};
-			emit_fragment(px.x+0.5, px.y+0.5);
-
-			cumulative_error += slope;
-		}
+		cumulative_error += slope;
 	}
 
 	
