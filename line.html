@@ -28,6 +28,8 @@ function rasterize_line( va, vb, emit_fragment ) {
 	var iteratingEnd;
 	var adjustingVariable;
 	var iteratingX;
+
+	
 	if (slope > 1 || slope < -1) {
 		if (dy < 0){
 			var tmp = va;
@@ -77,7 +79,12 @@ function rasterize_line( va, vb, emit_fragment ) {
 			x: iteratingX ? Math.floor(current) : Math.floor(adjustingVariable),
 			y: iteratingX ? Math.floor(adjustingVariable) : Math.floor(current)
 		};
-		emit_fragment(px.x+0.5, px.y+0.5);
+
+		const key = px.x + "." + px.y;
+		if (!(key in FRAGMENTS)) {
+			emit_fragment(px.x+0.5, px.y+0.5);
+		}
+		
 
 		cumulative_error += slope;
 	}
@@ -163,7 +170,8 @@ const VERTEX_RADIUS = 0.1;
 
 let VERTICES = [
 	{x: 1.5, y: 1.5},
-	{x: 2.5, y: 5.5}
+	{x: 2.5, y: 5.5},
+	{x: 6.5, y: 5.5}
 ];
 VERTICES.dirty = true; //dirty flag controls whether rasterize gets called next draw()
 
