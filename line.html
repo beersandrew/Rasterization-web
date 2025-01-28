@@ -16,29 +16,44 @@
 * box, i.e., (x+0.5,y)-(x+1,y+0.5)-(x+0.5,y+1)-(x,y+0.5) .
 *
 */
-function rasterize_line( va, vb, emit_fragment ) {
-	//TODO: fill in this function
 
-	//This is a very bad placeholder implementation, just here so you see something by default.
-	//Don't actually do this.
-	
-	//draw equally-spaced fragments along the line:
-	for (let i = 0; i <= 5; ++i) {
-		//amount to interpolate
-		const amt = i / 5.0;
-		//pt is linearly interpolated between va and vb:
-		const pt = {
-			x:(vb.x - va.x) * amt + va.x,
-			y:(vb.y - va.y) * amt + va.y
-		};
+
+va = 0,0
+function rasterize_line( va, vb, emit_fragment ) {
+	console.log("START");
+	var dx = vb.x - va.x;
+	var dy = vb.y - va.y;
+	var y = va.y;
+
+	var m = 1.0*dy / dx;
+
+	var eps = 0;
+
+	console.log("dx: ", dx);
+	console.log("dy: ", dy);
+
+	for(var x = va.x; x < vb.x; x++){
+
+		console.log("x: ", x);
+		console.log("y: ", y);
+		console.log("eps: ", eps);
+		if (eps > 0.5){
+			y++;
+			eps -= 1;
+		}
+		
 		//px is the pixel containing pt:
 		const px = {
-			x:Math.floor(pt.x),
-			y:Math.floor(pt.y)
+			x:Math.floor(x),
+			y:Math.floor(y)
 		};
 		//emit fragment at px (+0.5 because emit_fragment wants pixel center)
 		emit_fragment(px.x+0.5, px.y+0.5);
+
+		eps += m;
+
 	}
+	console.log("end");
 }
 </script>
 <style>
@@ -116,8 +131,7 @@ const VERTEX_RADIUS = 0.1;
 
 let VERTICES = [
 	{x: 3.5, y: 3.5},
-	{x: 6.5, y: 4.5},
-	{x: 12.5, y: 2.5}
+	{x: 6.5, y: 4.5}
 ];
 VERTICES.dirty = true; //dirty flag controls whether rasterize gets called next draw()
 
