@@ -27,6 +27,8 @@ function rasterize_line( va, vb, emit_fragment ) {
 
 	var m = 1.0*dy / dx;
 
+	console.log("m:", m);
+
 	var eps = 0;
 
 	console.log("dx: ", dx);
@@ -37,21 +39,26 @@ function rasterize_line( va, vb, emit_fragment ) {
 		console.log("x: ", x);
 		console.log("y: ", y);
 		console.log("eps: ", eps);
-		if (eps > 0.5){
-			y++;
-			eps -= 1;
+		if (eps > 0.5 || eps < -0.5){
+			
+			if (eps > 0){
+				y++;
+				eps -= 1;
+			}
+			else {
+				y--;
+				eps += 1;
+			}
 		}
 		
-		//px is the pixel containing pt:
 		const px = {
 			x:Math.floor(x),
 			y:Math.floor(y)
 		};
-		//emit fragment at px (+0.5 because emit_fragment wants pixel center)
 		emit_fragment(px.x+0.5, px.y+0.5);
 
-		eps += m;
 
+		eps += m;
 	}
 	console.log("end");
 }
