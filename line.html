@@ -22,6 +22,13 @@ va = 0,0
 function rasterize_line( va, vb, emit_fragment ) {
 	console.log("START");
 	var dx = vb.x - va.x;
+
+	if (dx < 0){
+		var tmp = va;
+		va = vb;
+		vb = tmp;
+		dx = vb.x - va.x;
+	}
 	var dy = vb.y - va.y;
 	var y = va.y;
 
@@ -35,7 +42,6 @@ function rasterize_line( va, vb, emit_fragment ) {
 	console.log("dy: ", dy);
 
 	for(var x = va.x; x < vb.x; x++){
-
 		console.log("x: ", x);
 		console.log("y: ", y);
 		console.log("eps: ", eps);
@@ -57,11 +63,12 @@ function rasterize_line( va, vb, emit_fragment ) {
 		};
 		emit_fragment(px.x+0.5, px.y+0.5);
 
-
 		eps += m;
 	}
 	console.log("end");
 }
+
+
 </script>
 <style>
 html, body, h1, h2, p { padding: 0; margin: 0; }
