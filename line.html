@@ -19,6 +19,9 @@
 
 
 function rasterize_line( va, vb, emit_fragment ) {
+
+	console.log("va: ", va)
+	console.log("vb: ", vb)
 	var dx = vb.x - va.x;
 	var dy = vb.y - va.y;
 
@@ -27,6 +30,7 @@ function rasterize_line( va, vb, emit_fragment ) {
 	var iteratingStart;
 	var iteratingEnd;
 	var adjustingVariable;
+	var adjustingEnd;
 	var iteratingX;
 
 	
@@ -44,6 +48,7 @@ function rasterize_line( va, vb, emit_fragment ) {
 		iteratingStart = va.y;
 		iteratingEnd = vb.y;
 		adjustingVariable = va.x;
+		adjustingEnd = vb.x;
 		iteratingX = false;
 	}
 	else{
@@ -59,12 +64,16 @@ function rasterize_line( va, vb, emit_fragment ) {
 		iteratingStart = va.x;
 		iteratingEnd = vb.x;
 		adjustingVariable = va.y;
+		adjustingEnd = vb.y;
 		iteratingX = true;
 	}
 
 	for(var current = iteratingStart; current < iteratingEnd; current++){
+
+		var isFirstIteration = current == iteratingStart;
+		var isLastIteration = current + 1 >= iteratingEnd;
+
 		if (cumulative_error > 0.5 || cumulative_error < -0.5){
-			
 			if (cumulative_error > 0){
 				adjustingVariable++;
 				cumulative_error -= 1;
@@ -74,15 +83,48 @@ function rasterize_line( va, vb, emit_fragment ) {
 				cumulative_error += 1;
 			}
 		}
+
 		
 		const px = {
-			x: iteratingX ? Math.floor(current) : Math.floor(adjustingVariable),
-			y: iteratingX ? Math.floor(adjustingVariable) : Math.floor(current)
+			x: iteratingX ? current : adjustingVariable,
+			y: iteratingX ? adjustingVariable : current
 		};
+
+		if (isFirstIteration){
+			var x = px.x;
+			var cx = Math.floor(px.x) + 0.5;
+			var xComponent = Math.abs(x - cx);
+			var y = px.y;
+			var cy = Math.floor(px.y) + 0.5;
+			var yComponent = Math.abs(y - cy);
+
+
+			console.log("calc: ", xComponent, yComponent, x, cx, y, cy)
+			if (xComponent + yComponent <= 0.5){
+				console.log("BEGINNING IS IN THE DIAMOND")
+			}
+		}
+		
+		
+		if (isLastIteration){
+			var x = iteratingX ? iteratingEnd : adjustingEnd
+			var y = iteratingX ? adjustingEnd : iteratingEnd
+
+			var cx = Math.floor(x) + 0.5;
+			var xComponent = Math.abs(x - cx);
+			var cy = Math.floor(y) + 0.5;
+			var yComponent = Math.abs(y - cy);
+
+
+			console.log("calc END: ", xComponent, yComponent, x, cx, y, cy)
+			if (xComponent + yComponent <= 0.5){
+				console.log("END IS IN THE DIAMOND")
+			}
+		}
 
 		const key = px.x + "." + px.y;
 		if (!(key in FRAGMENTS)) {
-			emit_fragment(px.x+0.5, px.y+0.5);
+			emit_fragment(Math.floor(px.x)+0.5, Math.floor(px.y)+0.5);
 		}
 		
 
@@ -163,15 +205,14 @@ const CTX = CANVAS.getContext('2d');
 //canvas will be PX_WIDTH x PX_HEIGHT with a PX_MARGIN margin on all sides
 const PX_MARGIN = 0.25;
 const PX_WIDTH = 16;
-const PX_HEIGHT = 8;
-let PX_SIZE = 10.0;
+const PX_HEIGHT = 16;
+let PX_SIZE = 5.0;
 
 const VERTEX_RADIUS = 0.1;
 
 let VERTICES = [
-	{x: 1.5, y: 1.5},
-	{x: 2.5, y: 5.5},
-	{x: 6.5, y: 5.5}
+	{x: 5, y: 14.5},
+	{x: 5.125, y: 14}
 ];
 VERTICES.dirty = true; //dirty flag controls whether rasterize gets called next draw()
 
