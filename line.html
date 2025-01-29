@@ -68,7 +68,42 @@ function try_emit(current, context, emit_fragment){
 	}
 }
 
+function AreInSamePixel(vertexA, vertexB){
+	return Math.floor(vertexA.x) == Math.floor(vertexB.x) && Math.floor(vertexA.y) == Math.floor(vertexB.y);
+}
+
+function IsInsideDiamond(vertex){
+	var cx = Math.floor(vertex.x) + 0.5;
+	var xComponent = Math.abs(vertex.x - cx);
+	var cy = Math.floor(vertex.y) + 0.5;
+	var yComponent = Math.abs(vertex.y - cy);
+
+	return xComponent + yComponent < 0.5
+}
+
 function rasterize_line( vertexA, vertexB, emit_fragment ) {
+
+	// Are both in the same square
+
+	if (AreInSamePixel(vertexA, vertexB)){
+
+		console.log("start and end in same pixel")
+
+		if (IsInsideDiamond(vertexA) && IsInsideDiamond(vertexB)){
+			return;
+		}
+
+
+			// Are both outside the same diamond?
+
+
+			// Are both on a 'bad edge' of the same diamond?
+
+	}
+
+
+
+
 	const context = getLineContext(vertexA, vertexB);
 
 	var accumulatedError = 0;
@@ -95,8 +130,14 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 			var yComponent = Math.abs(vertexA.y - cy);
 
 			console.log("calc: ", xComponent, yComponent, vertexA, cx, cy)
-			if (xComponent + yComponent <= 0.5){
+
+			var isInDiamond = xComponent + yComponent < 0.5
+			var isOnDiamond = xComponent + yComponent == 0.5
+			if (isInDiamond){
 				console.log("BEGINNING IS IN THE DIAMOND")
+			}
+			else{
+
 			}
 		}
 		
