@@ -56,11 +56,7 @@ function getLineContext(vertexA, vertexB){
 	return context;
 }
 
-function try_emit(current, context, emit_fragment){
-	const centerOfFragmentToEmit = {
-		x: context.iteratingX ? current : context.adjusting.start,
-		y: context.iteratingX ? context.adjusting.start : current
-	};
+function try_emit(centerOfFragmentToEmit, emit_fragment){
 
 	const key = centerOfFragmentToEmit.x + "." + centerOfFragmentToEmit.y;
 	if (!(key in FRAGMENTS)) {
@@ -72,13 +68,42 @@ function AreInSamePixel(vertexA, vertexB){
 	return Math.floor(vertexA.x) == Math.floor(vertexB.x) && Math.floor(vertexA.y) == Math.floor(vertexB.y);
 }
 
-function IsInsideDiamond(vertex){
-	var cx = Math.floor(vertex.x) + 0.5;
-	var xComponent = Math.abs(vertex.x - cx);
-	var cy = Math.floor(vertex.y) + 0.5;
-	var yComponent = Math.abs(vertex.y - cy);
+function AreInSameQuadrant(vertexA, vertexB){
+	const cx = Math.floor(vertexA.x) + 0.5;
+	const cy = Math.floor(vertexA.y) + 0.5;
 
-	return xComponent + yComponent < 0.5
+	const xComponentVertexA = vertexA.x - cx;
+	const yComponentVertexA = vertexA.y - cy;
+	const xComponentVertexB = vertexB.x - cx;
+	const yComponentVertexB = vertexB.y - cy;
+
+	if (((xComponentVertexA > 0 && xComponentVertexB > 0) || (xComponentVertexA < 0 && xComponentVertexB < 0)) && 
+		((yComponentVertexA > 0 && yComponentVertexB > 0) || (yComponentVertexA < 0 && yComponentVertexB < 0))){
+		return true;
+	}
+
+	return false;
+}
+
+function GetManhattanDistance(vertex){
+	const cx = Math.floor(vertex.x) + 0.5;
+	const xComponent = Math.abs(vertex.x - cx);
+	const cy = Math.floor(vertex.y) + 0.5;
+	const yComponent = Math.abs(vertex.y - cy);
+
+	return xComponent + yComponent;
+}
+
+function IsInsideDiamond(manhattanDistance){
+	return manhattanDistance < 0.5
+}
+
+function IsOnDiamond(manhattanDistance){
+	return manhattanDistance == 0.5
+}
+
+function IsOutsideDiamond(manhattanDistance){
+	return manhattanDistance > 0.5
 }
 
 function rasterize_line( vertexA, vertexB, emit_fragment ) {
@@ -89,20 +114,31 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 
 		console.log("start and end in same pixel")
 
-		if (IsInsideDiamond(vertexA) && IsInsideDiamond(vertexB)){
+		const vertexAManhattanDistance = GetManhattanDistance(vertexA);
+		const vertexBManhattanDistance = GetManhattanDistance(vertexB);
+
+		const bothInside = IsInsideDiamond(vertexAManhattanDistance) && IsInsideDiamond(vertexBManhattanDistance);
+		if (bothInside){
+			console.log("both inside")
 			return;
 		}
 
+		// both outside in the same quadrant
+		const bothOutside = IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance);
+		if (bothOutside){
 
-			// Are both outside the same diamond?
+			if (AreInSameQuadrant(vertexA, vertexB)){
+				console.log("both outside, do not cross")
+			}
+			else {
+				console.log("emitting")
+				try_emit(vertexA, emit_fragment);
+			}
+			return;
+		}
 
-
-			// Are both on a 'bad edge' of the same diamond?
-
+		// both on the same edge
 	}
-
-
-
 
 	const context = getLineContext(vertexA, vertexB);
 
@@ -154,7 +190,11 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 			}
 		}
 
-		try_emit(current, context, emit_fragment);
+		const centerOfFragmentToEmit = {
+			x: context.iteratingX ? current : context.adjusting.start,
+			y: context.iteratingX ? context.adjusting.start : current
+		};
+		try_emit(centerOfFragmentToEmit, emit_fragment);
 	}
 }
 
