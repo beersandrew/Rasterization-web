@@ -17,124 +17,105 @@
 *
 */
 
+function getLineContext(vertexA, vertexB){
+	let dx = vertexB.x - vertexA.x;
+	let dy = vertexB.y - vertexA.y;
 
-function rasterize_line( va, vb, emit_fragment ) {
+	var context = {
+		slope: dy / dx,
+		vertexA: vertexA,
+		vertexB: vertexB
+	};
 
-	console.log("va: ", va)
-	console.log("vb: ", vb)
-	var dx = vb.x - va.x;
-	var dy = vb.y - va.y;
-
-	var slope = dy / dx;
-	var cumulative_error = 0;
-	var iteratingStart;
-	var iteratingEnd;
-	var adjustingVariable;
-	var adjustingEnd;
-	var iteratingX;
-
-	
-	if (slope > 1 || slope < -1) {
+	if (Math.abs(context.slope) > 1) {
 		if (dy < 0){
-			var tmp = va;
-			va = vb;
-			vb = tmp;
+			context.vertexA = vertexB;
+			context.vertexB = vertexA;
 
-			dx = vb.x - va.x;
-			dy = vb.y - va.y;
+			dx = context.vertexB.x - context.vertexA.x;
+			dy = context.vertexB.y - context.vertexA.y;
 		}
-		slope = dx / dy;
-
-		iteratingStart = va.y;
-		iteratingEnd = vb.y;
-		adjustingVariable = va.x;
-		adjustingEnd = vb.x;
-		iteratingX = false;
+		context.slope = dx / dy;
+		context.iterating = { start: context.vertexA.y, end: context.vertexB.y}
+		context.adjusting = { start: context.vertexA.x, end: context.vertexB.x}
+		context.iteratingX = false;
 	}
 	else{
 		if (dx < 0){
-			var tmp = va;
-			va = vb;
-			vb = tmp;
-			dx = vb.x - va.x;
-			dy = vb.y - va.y;
-			slope = dy / dx;
+			context.vertexA = vertexB;
+			context.vertexB = vertexA;
+			dx = context.vertexB.x - context.vertexA.x;
+			dy = context.vertexB.y - context.vertexA.y;
+			context.slope = dy / dx;
 		}
-
-		iteratingStart = va.x;
-		iteratingEnd = vb.x;
-		adjustingVariable = va.y;
-		adjustingEnd = vb.y;
-		iteratingX = true;
+		context.iterating = { start: context.vertexA.x, end: context.vertexB.x}
+		context.adjusting = { start: context.vertexA.y, end: context.vertexB.y}
+		context.iteratingX = true;
 	}
 
-	for(var current = iteratingStart; current < iteratingEnd; current++){
+	return context;
+}
 
-		var isFirstIteration = current == iteratingStart;
-		var isLastIteration = current + 1 >= iteratingEnd;
+function try_emit(current, context, emit_fragment){
+	const centerOfFragmentToEmit = {
+		x: context.iteratingX ? current : context.adjusting.start,
+		y: context.iteratingX ? context.adjusting.start : current
+	};
 
-		if (cumulative_error > 0.5 || cumulative_error < -0.5){
-			if (cumulative_error > 0){
-				adjustingVariable++;
-				cumulative_error -= 1;
+	const key = centerOfFragmentToEmit.x + "." + centerOfFragmentToEmit.y;
+	if (!(key in FRAGMENTS)) {
+		emit_fragment(Math.floor(centerOfFragmentToEmit.x)+0.5, Math.floor(centerOfFragmentToEmit.y)+0.5);
+	}
+}
+
+function rasterize_line( vertexA, vertexB, emit_fragment ) {
+	const context = getLineContext(vertexA, vertexB);
+
+	var accumulatedError = 0;
+
+	for(var current = context.iterating.start; current < context.iterating.end; current++){
+		
+		if (accumulatedError > 0.5 || accumulatedError < -0.5){
+			if (accumulatedError > 0){
+				context.adjusting.start++;
+				accumulatedError -= 1;
 			}
 			else {
-				adjustingVariable--;
-				cumulative_error += 1;
+				context.adjusting.start--;
+				accumulatedError += 1;
 			}
 		}
+		accumulatedError += context.slope;
 
-		
-		const px = {
-			x: iteratingX ? current : adjustingVariable,
-			y: iteratingX ? adjustingVariable : current
-		};
-
+		var isFirstIteration = current == context.iterating.start;
 		if (isFirstIteration){
-			var x = px.x;
-			var cx = Math.floor(px.x) + 0.5;
-			var xComponent = Math.abs(x - cx);
-			var y = px.y;
-			var cy = Math.floor(px.y) + 0.5;
-			var yComponent = Math.abs(y - cy);
+			var cx = Math.floor(vertexA.x) + 0.5;
+			var xComponent = Math.abs(vertexA.x - cx);
+			var cy = Math.floor(vertexA.y) + 0.5;
+			var yComponent = Math.abs(vertexA.y - cy);
 
-
-			console.log("calc: ", xComponent, yComponent, x, cx, y, cy)
+			console.log("calc: ", xComponent, yComponent, vertexA, cx, cy)
 			if (xComponent + yComponent <= 0.5){
 				console.log("BEGINNING IS IN THE DIAMOND")
 			}
 		}
 		
-		
+		var isLastIteration = current + 1 >= context.iterating.end;
 		if (isLastIteration){
-			var x = iteratingX ? iteratingEnd : adjustingEnd
-			var y = iteratingX ? adjustingEnd : iteratingEnd
+			var cx = Math.floor(vertexB.x) + 0.5;
+			var xComponent = Math.abs(vertexB.x - cx);
+			var cy = Math.floor(vertexB.y) + 0.5;
+			var yComponent = Math.abs(vertexB.y - cy);
 
-			var cx = Math.floor(x) + 0.5;
-			var xComponent = Math.abs(x - cx);
-			var cy = Math.floor(y) + 0.5;
-			var yComponent = Math.abs(y - cy);
-
-
-			console.log("calc END: ", xComponent, yComponent, x, cx, y, cy)
+			console.log("calc END: ", xComponent, yComponent, vertexB, cx, cy)
 			if (xComponent + yComponent <= 0.5){
 				console.log("END IS IN THE DIAMOND")
 			}
 		}
 
-		const key = px.x + "." + px.y;
-		if (!(key in FRAGMENTS)) {
-			emit_fragment(Math.floor(px.x)+0.5, Math.floor(px.y)+0.5);
-		}
-		
-
-		cumulative_error += slope;
+		try_emit(current, context, emit_fragment);
 	}
-
-	
-	console.log("end");
 }
-
 
 </script>
 <style>
