@@ -154,8 +154,6 @@ function DoLinesCross(lineA, lineB){
 
 function rasterize_line( vertexA, vertexB, emit_fragment ) {
 
-	// Are both in the same square
-
 	if (AreInSamePixel(vertexA, vertexB)){
 
 		console.log("start and end in same pixel")
@@ -163,16 +161,11 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 		const vertexAManhattanDistance = GetManhattanDistance(vertexA);
 		const vertexBManhattanDistance = GetManhattanDistance(vertexB);
 
-		const bothInside = IsInsideDiamond(vertexAManhattanDistance) && IsInsideDiamond(vertexBManhattanDistance);
-		if (bothInside){
+		if (IsInsideDiamond(vertexAManhattanDistance) && IsInsideDiamond(vertexBManhattanDistance)){
 			console.log("both inside")
 			return;
 		}
-
-		// both outside in the same quadrant
-		const bothOutside = IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance);
-		if (bothOutside){
-
+		else if (IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance)){
 			if (AreInSameQuadrant(vertexA, vertexB)){
 				console.log("both outside, do not cross")
 			}
@@ -182,23 +175,26 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 			}
 			return;
 		}
-
-		const bothOnEdge = IsOnDiamond(vertexAManhattanDistance) && IsOnDiamond(vertexBManhattanDistance);
-		if (bothOnEdge){
+		else if (vertexA.x == Math.floor(vertexA.x) + 0.5 && vertexA.y == Math.floor(vertexA.y)){
+			try_emit(vertexA, emit_fragment);
 			return;
 		}
-
-		const result = DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexA);
-
-			if (result){
-				console.log("ONLY: CROSS - emit")
-				try_emit(vertexA, emit_fragment);
-				return;
-			}
-			else{
-				console.log("ONLY: no cross - same pixel")
-				return;
-			}
+		else if (vertexA.x == Math.floor(vertexA.x) && vertexA.y == Math.floor(vertexA.y) + 0.5){
+			try_emit(vertexA, emit_fragment);
+			return;
+		}
+		else if (IsOnDiamond(vertexAManhattanDistance) && IsOnDiamond(vertexBManhattanDistance)){
+			return;
+		}
+		else if (DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexA)){
+			console.log("ONLY: CROSS - emit")
+			try_emit(vertexA, emit_fragment);
+			return;
+		}
+		else{
+			console.log("ONLY: no cross - same pixel")
+			return;
+		}
 	}
 
 	const context = getLineContext(vertexA, vertexB);
@@ -223,15 +219,20 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 
 		var isFirstIteration = current == Math.floor(context.iterating.start);
 		if (isFirstIteration){
-			
-			const result = DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexA);
-
-			if (result){
+			if (DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexA)){
 				console.log("INITIAL: CROSS - emit?")
 				try_emit(vertexA, emit_fragment);
 			}
-			else{
-				console.log("INITIAL: no cross")
+			else if (IsOnDiamond(GetManhattanDistance(vertexA))){
+				// If on bottom -> emit
+				if (vertexA.x == Math.floor(vertexA.x) + 0.5 && vertexA.y == Math.floor(vertexA.y)){
+					try_emit(vertexA, emit_fragment);
+				}
+				else if (vertexA.x == Math.floor(vertexA.x) && vertexA.y == Math.floor(vertexA.y) + 0.5){
+					try_emit(vertexA, emit_fragment);
+				}
+
+				// If on 
 			}
 
 			continue;
@@ -242,7 +243,6 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 			// if we crossed the diamond and we are outside, we emit
 			if (DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexB) && IsOutsideDiamond(GetManhattanDistance(vertexB))){
 				console.log("END: CROSS")
-	
 				try_emit(vertexB, emit_fragment);
 			}
 			else{
