@@ -205,7 +205,7 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 
 	var accumulatedError = 0;
 
-	for(var current = context.iterating.start; current < context.iterating.end; current++){
+	for(var current = Math.floor(context.iterating.start); current < Math.ceil(context.iterating.end); current++){
 
 		console.log("checking point: ", current, context.adjusting.start)
 		
@@ -221,7 +221,7 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 		}
 		accumulatedError += context.slope;
 
-		var isFirstIteration = current == context.iterating.start;
+		var isFirstIteration = current == Math.floor(context.iterating.start);
 		if (isFirstIteration){
 			
 			const result = DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexA);
@@ -328,15 +328,15 @@ const CTX = CANVAS.getContext('2d');
 
 //canvas will be PX_WIDTH x PX_HEIGHT with a PX_MARGIN margin on all sides
 const PX_MARGIN = 0.25;
-const PX_WIDTH = 16;
-const PX_HEIGHT = 16;
+const PX_WIDTH = 5;
+const PX_HEIGHT = 5;
 let PX_SIZE = 5.0;
 
 const VERTEX_RADIUS = 0.1;
 
 let VERTICES = [
-	{x: 5, y: 14.5},
-	{x: 5.125, y: 14}
+	{x: 0.875, y: 0.875},
+	{x: 0.875, y: 2.125}
 ];
 VERTICES.dirty = true; //dirty flag controls whether rasterize gets called next draw()
 
