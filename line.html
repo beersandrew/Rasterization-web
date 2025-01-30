@@ -539,10 +539,16 @@ function draw() {
 	//line vertices:
 	//TODO: nice circles at vertices!
 	const radius = VERTEX_RADIUS;
+	var first = true;
 	for (let vertex of VERTICES) {
-		CTX.fillStyle = '#f88';
+		CTX.fillStyle = '#06b5ff';
 		if (vertex == HOVERED_VERTEX) {
 			CTX.fillStyle = '#ff8';
+		}
+
+		if (first){
+			CTX.fillStyle = '#ff06b5';
+			first = false;
 		}
 		CTX.fillRect(vertex.x-radius, vertex.y-radius, 2*radius, 2*radius);
 	}
