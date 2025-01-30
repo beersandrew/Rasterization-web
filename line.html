@@ -137,6 +137,11 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 			return;
 		}
 
+		const bothOnEdge = IsOnDiamond(vertexAManhattanDistance) && IsOnDiamond(vertexBManhattanDistance);
+		if (bothOnEdge){
+			return;
+		}
+
 		// both on the same edge
 	}
 
