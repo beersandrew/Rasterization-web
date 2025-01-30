@@ -106,6 +106,52 @@ function IsOutsideDiamond(manhattanDistance){
 	return manhattanDistance > 0.5
 }
 
+function DoesLineCrossDiamond(rasterLine, vertex){
+	const diamondLines = GetDiamondLinesForPixel(vertex);
+
+	for(var diamondLine of diamondLines){
+
+		if (DoLinesCross(rasterLine, diamondLine)){
+			return true;
+		}
+	}
+
+	return false;
+}
+
+function GetDiamondLinesForPixel(vertex){
+	const topDiamondVertex = { x: Math.floor(vertex.x) + 0.5, y: Math.ceil(vertex.y)};
+	const rightDiamondVertex = { x: Math.ceil(vertex.x), y: Math.floor(vertex.y) + 0.5 };
+	const bottomDiamondVertex = { x: Math.floor(vertex.x) + 0.5, y: Math.floor(vertex.y)};
+	const leftDiamondVertex = { x: Math.floor(vertex.x), y: Math.floor(vertex.y) + 0.5 };
+
+	return [
+		{ start: topDiamondVertex, end: rightDiamondVertex},
+		{ start: rightDiamondVertex, end: bottomDiamondVertex},
+		{ start: bottomDiamondVertex, end: leftDiamondVertex},
+		{ start: leftDiamondVertex, end: topDiamondVertex}
+	];
+}
+
+function SolveForTandU(lineA, lineB){
+	// convert lines to a linear equation in the form Ax = b from parametric equations
+	const determinantA = (lineB.end.x - lineB.start.x)*(lineA.end.y - lineA.start.y) - (lineA.end.x - lineA.start.x)*(lineB.end.y - lineB.start.y);
+	const determinantAt = (lineB.end.x - lineB.start.x)*(lineB.start.y - lineA.start.y) - (lineB.start.x - lineA.start.x)*(lineB.end.y - lineB.start.y);
+	const determinantAu = (lineA.end.x - lineA.start.x)*(lineB.start.y - lineA.start.y) - (lineB.start.x - lineA.start.x)*(lineA.end.y - lineA.start.y);
+
+	return {
+		t: determinantAt / determinantA,
+		u: determinantAu / determinantA
+	};
+}
+
+function DoLinesCross(lineA, lineB){
+
+	const intersectionResult = SolveForTandU(lineA, lineB);
+
+	return intersectionResult.t > 0 && intersectionResult.t <1 && intersectionResult.u > 0 && intersectionResult.u < 1;
+}
+
 function rasterize_line( vertexA, vertexB, emit_fragment ) {
 
 	// Are both in the same square
@@ -142,7 +188,17 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 			return;
 		}
 
-		// both on the same edge
+		const result = DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexA);
+
+			if (result){
+				console.log("ONLY: CROSS - emit")
+				try_emit(vertexA, emit_fragment);
+				return;
+			}
+			else{
+				console.log("ONLY: no cross - same pixel")
+				return;
+			}
 	}
 
 	const context = getLineContext(vertexA, vertexB);
@@ -150,6 +206,8 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 	var accumulatedError = 0;
 
 	for(var current = context.iterating.start; current < context.iterating.end; current++){
+
+		console.log("checking point: ", current, context.adjusting.start)
 		
 		if (accumulatedError > 0.5 || accumulatedError < -0.5){
 			if (accumulatedError > 0){
@@ -165,34 +223,33 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 
 		var isFirstIteration = current == context.iterating.start;
 		if (isFirstIteration){
-			var cx = Math.floor(vertexA.x) + 0.5;
-			var xComponent = Math.abs(vertexA.x - cx);
-			var cy = Math.floor(vertexA.y) + 0.5;
-			var yComponent = Math.abs(vertexA.y - cy);
+			
+			const result = DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexA);
 
-			console.log("calc: ", xComponent, yComponent, vertexA, cx, cy)
-
-			var isInDiamond = xComponent + yComponent < 0.5
-			var isOnDiamond = xComponent + yComponent == 0.5
-			if (isInDiamond){
-				console.log("BEGINNING IS IN THE DIAMOND")
+			if (result){
+				console.log("INITIAL: CROSS - emit?")
+				try_emit(vertexA, emit_fragment);
 			}
 			else{
-
+				console.log("INITIAL: no cross")
 			}
+
+			continue;
 		}
 		
 		var isLastIteration = current + 1 >= context.iterating.end;
 		if (isLastIteration){
-			var cx = Math.floor(vertexB.x) + 0.5;
-			var xComponent = Math.abs(vertexB.x - cx);
-			var cy = Math.floor(vertexB.y) + 0.5;
-			var yComponent = Math.abs(vertexB.y - cy);
+			const result = DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexB);
 
-			console.log("calc END: ", xComponent, yComponent, vertexB, cx, cy)
-			if (xComponent + yComponent <= 0.5){
-				console.log("END IS IN THE DIAMOND")
+			if (result){
+				console.log("END: CROSS")
+				try_emit(vertexB, emit_fragment);
 			}
+			else{
+				console.log("END: no cross")
+			}
+
+			return;
 		}
 
 		const centerOfFragmentToEmit = {
