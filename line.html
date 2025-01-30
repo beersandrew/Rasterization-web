@@ -239,10 +239,10 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 		
 		var isLastIteration = current + 1 >= context.iterating.end;
 		if (isLastIteration){
-			const result = DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexB);
-
-			if (result){
+			// if we crossed the diamond and we are outside, we emit
+			if (DoesLineCrossDiamond({start: vertexA, end: vertexB}, vertexB) && IsOutsideDiamond(GetManhattanDistance(vertexB))){
 				console.log("END: CROSS")
+	
 				try_emit(vertexB, emit_fragment);
 			}
 			else{
