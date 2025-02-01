@@ -99,6 +99,36 @@ function GetManhattanDistance(vertex){
 	return xComponent + yComponent;
 }
 
+function IsInsideDiamondFull(vertex, isIteratingX){
+
+	const cx = Math.floor(vertex.x) + 0.5;
+	const xComponent = Math.abs(vertex.x - cx);
+	const cy = Math.floor(vertex.y) + 0.5;
+	const yComponent = Math.abs(vertex.y - cy);
+
+	const manhattanDistance = xComponent + yComponent;
+
+	console.log("manhattan distance: ", manhattanDistance)
+
+	if (manhattanDistance < 0.5){
+		return true;
+	}
+
+	if (manhattanDistance == 0.5){
+		if (yComponent < 0){
+			return true;
+		}
+		
+		if (!isIteratingX){
+			if (xComponent == 0.5){
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 function IsInsideDiamond(manhattanDistance){
 	return manhattanDistance < 0.5
 }
@@ -152,7 +182,7 @@ function SolveForTandU(lineA, lineB){
 
 function DoLinesCross(lineA, lineB){
 	const intersectionResult = SolveForTandU(lineA, lineB);
-	return intersectionResult.t > 0 && intersectionResult.t <1 && intersectionResult.u > 0 && intersectionResult.u < 1;
+	return intersectionResult.t > 0 && intersectionResult.t < 1 && intersectionResult.u > 0 && intersectionResult.u < 1;
 }
 
 function IsOnDiamondBottom(vertex){
@@ -220,78 +250,123 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 		var isFirstIteration = current_a == Math.floor(context.iterating.start) + 0.5;
 		var isLastIteration = (current_a + 1) > Math.floor(context.iterating.end) + 0.5;
 		if (isFirstIteration){
-			if (DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA)){
-				console.log("INITIAL: CROSS - emit?")
-				try_emit(context.vertexA, emit_fragment);
-			}
-			else if (IsOnDiamondBottom(context.vertexA)){
-				try_emit(context.vertexA, emit_fragment);
-			}
-			else if (IsOnDiamondLeft(context.vertexA) && !context.iteratingX){
-				console.log("slope steep")
-				const pixelLeftOfVertexA = {x: context.vertexA.x - 1, y: context.vertexA.y}
-				try_emit(pixelLeftOfVertexA, emit_fragment);
-			}
-			else{
-				const current_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
+			var isInside = IsInsideDiamondFull(context.vertexA, context.iteratingX);
 
-				const vertex = context.iteratingX ? {x: current_a, y: current_b} : {x: current_b, y: current_a};
+			console.log("is inside: ", isInside);
 
-				console.log("vertex: ", vertex)
+			var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
 
-				// Vertical line goes to the left
-				if (!context.iteratingX && context.slope == 0 && context.vertexA.x == Math.floor(context.vertexA.x)){
-					vertex.x--;
-					try_emit(vertex, emit_fragment);
+			console.log("does cross: ", doesCrossLine)
+
+			if (context.vertexA == vertexA){
+				if (doesCrossLine || IsOnDiamondBottom(context.vertexA)){
+					try_emit(context.vertexA, emit_fragment);
 				}
-				else {
-					if (vertex.x < context.vertexA.x && vertex.y < context.vertexA.y){
-						// we're not in the starting square
-						console.log(" first: stopped bad emit at: ", vertex)
-					}
-					else {
-						try_emit(vertex, emit_fragment);
-					}
+			}
+			else {
+				if (!isInside && doesCrossLine){
+					try_emit(context.vertexA, emit_fragment);
 				}
+			}
+
+
+
+			// if (DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA)){
+			// 	console.log("INITIAL: CROSS - emit?")
+			// 	try_emit(context.vertexA, emit_fragment);
+			// }
+			// else if (IsOnDiamondBottom(context.vertexA)){
+			// 	try_emit(context.vertexA, emit_fragment);
+			// }
+			// else if (IsOnDiamondLeft(context.vertexA) && !context.iteratingX){
+			// 	console.log("slope steep")
+			// 	const pixelLeftOfVertexA = {x: context.vertexA.x - 1, y: context.vertexA.y}
+			// 	try_emit(pixelLeftOfVertexA, emit_fragment);
+			// }
+			// else{
+			// 	const current_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
+
+			// 	const vertex = context.iteratingX ? {x: current_a, y: current_b} : {x: current_b, y: current_a};
+
+			// 	console.log("vertex: ", vertex)
+
+			// 	// Vertical line goes to the left
+			// 	if (!context.iteratingX && context.slope == 0 && context.vertexA.x == Math.floor(context.vertexA.x)){
+			// 		vertex.x--;
+			// 		try_emit(vertex, emit_fragment);
+			// 	}
+			// 	else {
+			// 		if (vertex.x < context.vertexA.x && vertex.y < context.vertexA.y){
+			// 			// we're not in the starting square
+			// 			console.log(" first: stopped bad emit at: ", vertex)
+			// 		}
+			// 		else {
+			// 			try_emit(vertex, emit_fragment);
+			// 		}
+			// 	}
 				
-			}
+			// }
 		}
 		else if (isLastIteration){
-			// if we crossed the diamond and we are outside, we emit
-			if (DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB) && IsOutsideDiamond(GetManhattanDistance(context.vertexB))){
-				console.log("END: CROSS")
-				try_emit(context.vertexB, emit_fragment);
-			}
-			else if (IsOnDiamondBottom(context.vertexB)){
-				try_emit(context.vertexB, emit_fragment);
-			}
-			else if (IsOnDiamondLeft(context.vertexB) && !context.iteratingX){
-				console.log("slope steep")
-				const pixelLeftOfVertexB = {x: context.vertexB.x - 1, y: context.vertexB.y}
-				try_emit(pixelLeftOfVertexB, emit_fragment);
-			}
-			else{
-				const current_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
 
-				const vertex = context.iteratingX ? {x: current_a, y: current_b} : {x: current_b, y: current_a};
 
-				console.log("vertex: ", vertex)
+			var isInside = IsInsideDiamondFull(context.vertexB, context.iteratingX);
 
-				if (!context.iteratingX && context.slope == 0 && context.vertexA.x == Math.floor(context.vertexA.x)){
-					vertex.x--;
-				}
+			console.log("is inside: ", isInside);
 
-				if (vertex.x <= context.vertexA.x || vertex.y <= context.vertexA.y){
-					
-					try_emit(vertex, emit_fragment);
-				}
-				else {
+			var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB);
 
-					// we're not in the starting square
-					console.log(" last: stopped bad emit at: ", vertex)
+			console.log("does cross: ", doesCrossLine)
+
+			if (context.vertexA == vertexA){
+				if (!isInside && doesCrossLine){
+					try_emit(context.vertexB, emit_fragment);
 				}
 				
 			}
+			else {
+				if (doesCrossLine || IsOnDiamondBottom(context.vertexB)){
+					try_emit(context.vertexB, emit_fragment);
+				}
+			}
+
+
+
+			// // if we crossed the diamond and we are outside, we emit
+			// if (DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB) && IsOutsideDiamond(GetManhattanDistance(context.vertexB))){
+			// 	console.log("END: CROSS")
+			// 	try_emit(context.vertexB, emit_fragment);
+			// }
+			// else if (IsOnDiamondBottom(context.vertexB)){
+			// 	try_emit(context.vertexB, emit_fragment);
+			// }
+			// else if (IsOnDiamondLeft(context.vertexB) && !context.iteratingX){
+			// 	console.log("slope steep")
+			// 	const pixelLeftOfVertexB = {x: context.vertexB.x - 1, y: context.vertexB.y}
+			// 	try_emit(pixelLeftOfVertexB, emit_fragment);
+			// }
+			// else{
+			// 	const current_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
+
+			// 	const vertex = context.iteratingX ? {x: current_a, y: current_b} : {x: current_b, y: current_a};
+
+			// 	console.log("vertex: ", vertex)
+
+			// 	if (!context.iteratingX && context.slope == 0 && context.vertexA.x == Math.floor(context.vertexA.x)){
+			// 		vertex.x--;
+			// 	}
+
+			// 	if (vertex.x <= context.vertexA.x || vertex.y <= context.vertexA.y){
+					
+			// 		try_emit(vertex, emit_fragment);
+			// 	}
+			// 	else {
+
+			// 		// we're not in the starting square
+			// 		console.log(" last: stopped bad emit at: ", vertex)
+			// 	}
+				
+			// }
 
 			return;
 		}
