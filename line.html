@@ -158,7 +158,7 @@ function IsPointOnLine(vertex, line){
 function IsOnInsideEdgeAndExiting(vertexA, vertexB){
 
 	const diamondLines = GetDiamondLinesForPixel(vertexA);
-	const vertexAOnBottomLeft = IsPointOnLine(vertexA, diamondLines.bottomLeft);
+	const vertexAOnBottomLeft = IsPointOnLine(vertexA, diamondLines.bottomLeft) && vertexA.y != diamondLines.bottomLeft.start.y;
 	const vertexAOnBottomRight = IsPointOnLine(vertexA, diamondLines.bottomRight);
 
 	if (vertexAOnBottomLeft || vertexAOnBottomRight){
@@ -206,7 +206,7 @@ function DoesLineCrossDiamond(rasterLine, vertex){
 
 function GetDiamondLinesForPixel(vertex){
 	const topDiamondVertex = { x: Math.floor(vertex.x) + 0.5, y: Math.ceil(vertex.y)};
-	const rightDiamondVertex = { x: Math.ceil(vertex.x), y: Math.floor(vertex.y) + 0.5 };
+	const rightDiamondVertex = { x: Math.floor(vertex.x) + 1.0, y: Math.floor(vertex.y) + 0.5 };
 	const bottomDiamondVertex = { x: Math.floor(vertex.x) + 0.5, y: Math.floor(vertex.y)};
 	const leftDiamondVertex = { x: Math.floor(vertex.x), y: Math.floor(vertex.y) + 0.5 };
 
@@ -306,12 +306,21 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 				if (doesCrossLine || IsOnInsideEdgeAndExiting(context.vertexA, context.vertexB)){
 					try_emit(context.vertexA, emit_fragment);
 				}
-			}
-			else {
-				if (!isInside && doesCrossLine){
-					try_emit(context.vertexA, emit_fragment);
+				else {
+					const current_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
+
+					const vertex = context.iteratingX ? {x: current_a, y: current_b} : {x: current_b, y: current_a};
+
+					if (!context.iteratingX && context.slope == 0 && context.vertexA.x == Math.floor(context.vertexA.x)){
+						vertex.x--;
+					}
+					try_emit(vertex, emit_fragment);
 				}
 			}
+			else if (!isInside && doesCrossLine){
+				try_emit(context.vertexA, emit_fragment);
+			}
+			
 
 
 
