@@ -17,6 +17,13 @@
 *
 */
 
+
+function getSlope(vertexA, vertexB){
+	const dx = vertexB.x - vertexA.x;
+	const dy = vertexB.y - vertexA.y;
+	return dy / dx;
+}
+
 function getLineContext(vertexA, vertexB){
 	let dx = vertexB.x - vertexA.x;
 	let dy = vertexB.y - vertexA.y;
@@ -141,15 +148,65 @@ function IsOutsideDiamond(manhattanDistance){
 	return manhattanDistance > 0.5
 }
 
-function DoesLineCrossDiamond(rasterLine, vertex){
-	const diamondLines = GetDiamondLinesForPixel(vertex);
+function IsPointOnLine(vertex, line){
 
-	for(var diamondLine of diamondLines){
+	const slope = getSlope(line.start, line.end);
 
-		if (DoLinesCross(rasterLine, diamondLine)){
+	var result = slope * (vertex.x - line.start.x) + line.start.y;
+
+	return vertex.y == result;
+}
+
+function IsOnInsideEdgeAndExiting(vertexA, vertexB){
+
+	const diamondLines = GetDiamondLinesForPixel(vertexA);
+	const vertexAOnBottomLeft = IsPointOnLine(vertexA, diamondLines.bottomLeft);
+	const vertexAOnBottomRight = IsPointOnLine(vertexA, diamondLines.bottomRight);
+
+	if (vertexAOnBottomLeft || vertexAOnBottomRight){
+		if (!AreInSamePixel(vertexA, vertexB)){
+			return true;
+		}
+		else {
+			if (IsInsideDiamond(vertexB)){
+				return false;
+			}
+
+			const vertexBOnBottomLeft = IsPointOnLine(vertexB, diamondLines.bottomLeft);
+
+			if (vertexAOnBottomLeft && vertexBOnBottomLeft){
+				return false;
+			}
+			
+			const vertexBOnBottomRight = IsPointOnLine(vertexB, diamondLines.bottomRight);
+			if (vertexAOnBottomRight && vertexAOnBottomRight){
+				return false;
+			}
+
 			return true;
 		}
 	}
+
+	return false;
+}
+
+function DoesLineCrossDiamond(rasterLine, vertex){
+	const diamondLines = GetDiamondLinesForPixel(vertex);
+
+	if (DoLinesCross(rasterLine, diamondLines.topLeft) || 
+		DoLinesCross(rasterLine, diamondLines.topRight) || 
+		DoLinesCross(rasterLine, diamondLines.bottomLeft) || 
+		DoLinesCross(rasterLine, diamondLines.bottomRight)) {
+		return true;
+	}
+
+	var bottomLeftResult = SolveForTandU(rasterLine, diamondLines.bottomLeft);
+
+	console.log("bottomLeft: ", bottomLeftResult);
+
+	var bottomRightResult = SolveForTandU(rasterLine, diamondLines.bottomRight);
+
+	console.log("bottomRight: ", bottomRightResult);	
 
 	return false;
 }
@@ -160,12 +217,12 @@ function GetDiamondLinesForPixel(vertex){
 	const bottomDiamondVertex = { x: Math.floor(vertex.x) + 0.5, y: Math.floor(vertex.y)};
 	const leftDiamondVertex = { x: Math.floor(vertex.x), y: Math.floor(vertex.y) + 0.5 };
 
-	return [
-		{ start: topDiamondVertex, end: rightDiamondVertex},
-		{ start: rightDiamondVertex, end: bottomDiamondVertex},
-		{ start: bottomDiamondVertex, end: leftDiamondVertex},
-		{ start: leftDiamondVertex, end: topDiamondVertex}
-	];
+	return {
+		topRight: { start: topDiamondVertex, end: rightDiamondVertex},
+		bottomRight: { start: bottomDiamondVertex, end: rightDiamondVertex},
+		bottomLeft: { start: leftDiamondVertex, end: bottomDiamondVertex},
+		topLeft: { start: leftDiamondVertex, end: topDiamondVertex}
+	};
 }
 
 function SolveForTandU(lineA, lineB){
@@ -197,50 +254,50 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 
 	const context = getLineContext(vertexA, vertexB);
 
-	if (AreInSamePixel(context.vertexA, context.vertexB)){
+	// if (AreInSamePixel(context.vertexA, context.vertexB)){
 
-		console.log("start and end in same pixel")
+	// 	console.log("start and end in same pixel")
 
-		const vertexAManhattanDistance = GetManhattanDistance(context.vertexA);
-		const vertexBManhattanDistance = GetManhattanDistance(context.vertexB);
+	// 	const vertexAManhattanDistance = GetManhattanDistance(context.vertexA);
+	// 	const vertexBManhattanDistance = GetManhattanDistance(context.vertexB);
 
-		if (IsInsideDiamond(vertexAManhattanDistance) && IsInsideDiamond(vertexBManhattanDistance)){
-			console.log("both inside")
-			return;
-		}
-		else if (IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance)){
-			if (AreInSameQuadrant(context.vertexA, context.vertexB)){
-				console.log("both outside, do not cross")
-			}
-			else {
-				console.log("emitting")
-				try_emit(context.vertexA, emit_fragment);
-			}
-			return;
-		}
-		else if (IsOnDiamondBottom(context.vertexA) || IsOnDiamondBottom(context.vertexB)){
-			try_emit(context.vertexA, emit_fragment);
-			return;
-		}
-		else if ((IsOnDiamondLeft(context.vertexA) || IsOnDiamondLeft(context.vertexB)) && !context.iteratingX){
-			console.log("slope steep")
-			const pixelLeftOfVertexA = {x: context.vertexA.x - 1, y: context.vertexA.y}
-			try_emit(pixelLeftOfVertexA, emit_fragment);
-			return;
-		}
-		else if (IsOnDiamond(vertexAManhattanDistance) && IsOnDiamond(vertexBManhattanDistance)){
-			return;
-		}
-		else if (DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, vertexA)){
-			console.log("ONLY: CROSS - emit")
-			try_emit(context.vertexA, emit_fragment);
-			return;
-		}
-		else{
-			console.log("ONLY: no cross - same pixel")
-			return;
-		}
-	}
+	// 	if (IsInsideDiamond(vertexAManhattanDistance) && IsInsideDiamond(vertexBManhattanDistance)){
+	// 		console.log("both inside")
+	// 		return;
+	// 	}
+	// 	else if (IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance)){
+	// 		if (AreInSameQuadrant(context.vertexA, context.vertexB)){
+	// 			console.log("both outside, do not cross")
+	// 		}
+	// 		else {
+	// 			console.log("emitting")
+	// 			try_emit(context.vertexA, emit_fragment);
+	// 		}
+	// 		return;
+	// 	}
+	// 	else if (IsOnDiamondBottom(context.vertexA) || IsOnDiamondBottom(context.vertexB)){
+	// 		try_emit(context.vertexA, emit_fragment);
+	// 		return;
+	// 	}
+	// 	else if ((IsOnDiamondLeft(context.vertexA) || IsOnDiamondLeft(context.vertexB)) && !context.iteratingX){
+	// 		console.log("slope steep")
+	// 		const pixelLeftOfVertexA = {x: context.vertexA.x - 1, y: context.vertexA.y}
+	// 		try_emit(pixelLeftOfVertexA, emit_fragment);
+	// 		return;
+	// 	}
+	// 	else if (IsOnDiamond(vertexAManhattanDistance) && IsOnDiamond(vertexBManhattanDistance)){
+	// 		return;
+	// 	}
+	// 	else if (DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, vertexA)){
+	// 		console.log("ONLY: CROSS - emit")
+	// 		try_emit(context.vertexA, emit_fragment);
+	// 		return;
+	// 	}
+	// 	else{
+	// 		console.log("ONLY: no cross - same pixel")
+	// 		return;
+	// 	}
+	// }
 
 	console.log("context: ", context)
 	for(var current_a = Math.floor(context.iterating.start) + 0.5; current_a <= Math.floor(context.iterating.end) + 0.5; current_a++){
@@ -259,7 +316,8 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 			console.log("does cross: ", doesCrossLine)
 
 			if (context.vertexA == vertexA){
-				if (doesCrossLine || IsOnDiamondBottom(context.vertexA)){
+			
+				if (doesCrossLine || IsOnInsideEdgeAndExiting(context.vertexA, context.vertexB)){
 					try_emit(context.vertexA, emit_fragment);
 				}
 			}
@@ -308,8 +366,6 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 			// }
 		}
 		else if (isLastIteration){
-
-
 			var isInside = IsInsideDiamondFull(context.vertexB, context.iteratingX);
 
 			console.log("is inside: ", isInside);
@@ -325,7 +381,11 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 				
 			}
 			else {
-				if (doesCrossLine || IsOnDiamondBottom(context.vertexB)){
+				if (doesCrossLine || IsOnDiamondBottom(context.vertexB) || IsOnInsideEdgeAndExiting(context.vertexB, context.vertexA)){
+
+					if (context.slope == 0 && context.vertexB.x == Math.floor(context.vertexB.x)){
+						context.vertexB.x--;
+					}
 					try_emit(context.vertexB, emit_fragment);
 				}
 			}
@@ -454,16 +514,34 @@ const CTX = CANVAS.getContext('2d');
 
 //canvas will be PX_WIDTH x PX_HEIGHT with a PX_MARGIN margin on all sides
 const PX_MARGIN = 0.25;
-const PX_WIDTH = 12;
-const PX_HEIGHT = 12;
+const PX_WIDTH = 16;
+const PX_HEIGHT = 16;
 let PX_SIZE = 5.0;
 
 const VERTEX_RADIUS = 0.1;
 
-let VERTICES = [
-	{x: 0.125, y: 0.75},
-	{x: 3.125, y: 4.125}
+let vertexIndex = 0;
+
+let test1 = [
+	{x: 0.5, y: 15.5},
+	{x: 1.5, y: 15.375}
 ];
+
+let test2 = [
+	{x: 1.5, y: 13.375},
+	{x: 0.5, y: 13.5}
+];
+
+
+let VERTICES = test1;
+
+
+
+
+let allVertices = [
+	test1,
+	test2
+]
 VERTICES.dirty = true; //dirty flag controls whether rasterize gets called next draw()
 
 //fragments emitted by last rasterization:
@@ -513,6 +591,7 @@ window.addEventListener('mousemove', function(evt){
 	requestDraw();
 	return false;
 });
+
 window.addEventListener('mousedown', function(evt){
 	evt.preventDefault();
 	setMouse(evt);
@@ -534,6 +613,17 @@ window.addEventListener('mouseup', function(evt){
 	}
 	requestDraw();
 	return false;
+});
+
+window.addEventListener('keydown', function(evt){
+	console.log("key: ", evt.key)
+
+	if (evt.key == 'n'){
+		vertexIndex++;
+		VERTICES = allVertices[vertexIndex];
+		VERTICES.dirty = true;
+		requestDraw();
+	}
 });
 
 
