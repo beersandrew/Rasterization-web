@@ -830,13 +830,99 @@ VERTICES.dirty = true; //dirty flag controls whether rasterize gets called next 
 //fragments emitted by last rasterization:
 let FRAGMENTS = {};
 
-let fragments1 = {}
-fragments1["0.15"] = {x: 0.5, y: 15.5, count: 1}
-let fragments2 = {}
-fragments2["1.13"] = {x: 1.5, y: 13.5, count: 1}
+let fragments1 = {"0.15": 1}
+let fragments2 = {"1.13": 1}
+let fragments3 = {"0.10": 1, "1.11": 1, "2.12": 1, "3.11":1}
+let fragments4 = {"1.1": 1, "2.2": 1}
+let fragments5 = {"1.7": 1, "2.8": 1, "3.8": 1, "4.7": 1}
+let fragments6 = {"1.13": 1}
+let fragments7 = {"1.13": 1}
+let fragments8 = {"1.13": 1}
+let fragments9 = {"1.13": 1}
+let fragments10 = {"1.13": 1}
+let fragments11 = {"0.15": 1}
+let fragments12 = {"1.13": 1}
+let fragments13 = {"1.13": 1}
+let fragments14 = {"1.13": 1}
+let fragments15 = {"1.13": 1}
+let fragments16 = {"1.13": 1}
+let fragments17 = {"1.13": 1}
+let fragments18 = {"1.13": 1}
+let fragments19 = {"1.13": 1}
+let fragments20 = {"1.13": 1}
+let fragments21 = {"0.15": 1}
+let fragments22 = {"1.13": 1}
+let fragments23 = {"1.13": 1}
+let fragments24 = {"1.13": 1}
+let fragments25 = {"1.13": 1}
+let fragments26 = {"1.13": 1}
+let fragments27 = {"1.13": 1}
+let fragments28 = {"1.13": 1}
+let fragments29 = {"1.13": 1}
+let fragments30 = {"1.13": 1}
+let fragments31 = {"0.15": 1}
+let fragments32 = {"1.13": 1}
+let fragments33 = {"1.13": 1}
+let fragments34 = {"1.13": 1}
+let fragments35 = {"1.13": 1}
+let fragments36 = {"1.13": 1}
+let fragments37 = {"1.13": 1}
+let fragments38 = {"1.13": 1}
+let fragments39 = {"1.13": 1}
+let fragments40 = {"1.13": 1}
+let fragments41 = {"0.15": 1}
+let fragments42 = {"1.13": 1}
+let fragments43 = {"1.13": 1}
+let fragments44 = {"1.13": 1}
+let fragments45 = {"1.13": 1}
+let fragments46 = {"1.13": 1}
+let fragments47 = {"1.13": 1}
+let fragments48 = {"1.13": 1}
+let fragments49 = {"1.13": 1}
+let fragments50 = {"1.13": 1}
+let fragments51 = {"1.13": 1}
 let EXPECTED_FRAGMENTS = [
 	fragments1,
-	fragments2
+	fragments2,
+	fragments3,
+	fragments4,
+	fragments5,
+	fragments6,
+	fragments7,
+	fragments8,
+	fragments9,
+	fragments10,
+	fragments21,
+	fragments22,
+	fragments23,
+	fragments24,
+	fragments25,
+	fragments26,
+	fragments27,
+	fragments28,
+	fragments29,
+	fragments30,
+	fragments31,
+	fragments32,
+	fragments33,
+	fragments34,
+	fragments35,
+	fragments36,
+	fragments37,
+	fragments38,
+	fragments39,
+	fragments40,
+	fragments41,
+	fragments42,
+	fragments43,
+	fragments44,
+	fragments45,
+	fragments46,
+	fragments47,
+	fragments48,
+	fragments49,
+	fragments50,
+	fragments51
 ];
 
 
@@ -910,8 +996,6 @@ window.addEventListener('mouseup', function(evt){
 });
 
 window.addEventListener('keydown', function(evt){
-	console.log("key: ", evt.key)
-
 	if (evt.key == 'n'){
 		vertexIndex++;
 		if (vertexIndex == 51){
@@ -978,10 +1062,8 @@ function rasterize() {
 		rasterize_line(va, vb, emit_fragment);
 	}
 
-
 	console.log("Test Start: ", vertexIndex + 1);
-	console.log("Expected: ", EXPECTED_FRAGMENTS[vertexIndex])
-	console.log("Actual: ", FRAGMENTS)
+	
 
 	var aKeys = Object.keys(EXPECTED_FRAGMENTS[vertexIndex]).sort();
   	var bKeys = Object.keys(FRAGMENTS).sort();
@@ -989,11 +1071,16 @@ function rasterize() {
 	var passed = true;
 	for(var i = 0; i < aKeys.length; i++){
 		if (aKeys[i] != bKeys[i]){
-			console.log("FAILED")
+			passed = false;
 		}
 	}
 	if (passed){
 		console.log("PASSED")
+	}
+	else{
+		console.error("FAILED")
+		console.error("Expected: ", EXPECTED_FRAGMENTS[vertexIndex])
+		console.error("Actual: ", FRAGMENTS)
 	}
 }
 
