@@ -115,8 +115,6 @@ function IsInsideDiamondFull(vertex, isIteratingX){
 
 	const manhattanDistance = xComponent + yComponent;
 
-	console.log("manhattan distance: ", manhattanDistance)
-
 	if (manhattanDistance < 0.5){
 		return true;
 	}
@@ -201,12 +199,7 @@ function DoesLineCrossDiamond(rasterLine, vertex){
 	}
 
 	var bottomLeftResult = SolveForTandU(rasterLine, diamondLines.bottomLeft);
-
-	console.log("bottomLeft: ", bottomLeftResult);
-
 	var bottomRightResult = SolveForTandU(rasterLine, diamondLines.bottomRight);
-
-	console.log("bottomRight: ", bottomRightResult);	
 
 	return false;
 }
@@ -299,21 +292,14 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 	// 	}
 	// }
 
-	console.log("context: ", context)
 	for(var current_a = Math.floor(context.iterating.start) + 0.5; current_a <= Math.floor(context.iterating.end) + 0.5; current_a++){
 
 
-		console.log("test point:", current_a)
 		var isFirstIteration = current_a == Math.floor(context.iterating.start) + 0.5;
 		var isLastIteration = (current_a + 1) > Math.floor(context.iterating.end) + 0.5;
 		if (isFirstIteration){
 			var isInside = IsInsideDiamondFull(context.vertexA, context.iteratingX);
-
-			console.log("is inside: ", isInside);
-
 			var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
-
-			console.log("does cross: ", doesCrossLine)
 
 			if (context.vertexA == vertexA){
 			
@@ -367,12 +353,7 @@ function rasterize_line( vertexA, vertexB, emit_fragment ) {
 		}
 		else if (isLastIteration){
 			var isInside = IsInsideDiamondFull(context.vertexB, context.iteratingX);
-
-			console.log("is inside: ", isInside);
-
 			var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB);
-
-			console.log("does cross: ", doesCrossLine)
 
 			if (context.vertexA == vertexA){
 				if (!isInside && doesCrossLine){
@@ -849,6 +830,17 @@ VERTICES.dirty = true; //dirty flag controls whether rasterize gets called next 
 //fragments emitted by last rasterization:
 let FRAGMENTS = {};
 
+let fragments1 = {}
+fragments1["0.15"] = {x: 0.5, y: 15.5, count: 1}
+let fragments2 = {}
+fragments2["1.13"] = {x: 1.5, y: 13.5, count: 1}
+let EXPECTED_FRAGMENTS = [
+	fragments1,
+	fragments2
+];
+
+
+
 let HOVERED_VERTEX = null; //reference to object in VERTICES
 let DRAGGING = null; //{vertex: , dx:, dy:} -- vertex + relative mouse position
 
@@ -928,9 +920,6 @@ window.addEventListener('keydown', function(evt){
 		VERTICES = allVertices[vertexIndex];
 		VERTICES.dirty = true;
 		requestDraw();
-
-
-		console.log("----Test Start: ", vertexIndex + 1);
 	}
 });
 
@@ -987,6 +976,24 @@ function rasterize() {
 		const vb = {x: VERTICES[i].x, y: VERTICES[i].y};
 
 		rasterize_line(va, vb, emit_fragment);
+	}
+
+
+	console.log("Test Start: ", vertexIndex + 1);
+	console.log("Expected: ", EXPECTED_FRAGMENTS[vertexIndex])
+	console.log("Actual: ", FRAGMENTS)
+
+	var aKeys = Object.keys(EXPECTED_FRAGMENTS[vertexIndex]).sort();
+  	var bKeys = Object.keys(FRAGMENTS).sort();
+
+	var passed = true;
+	for(var i = 0; i < aKeys.length; i++){
+		if (aKeys[i] != bKeys[i]){
+			console.log("FAILED")
+		}
+	}
+	if (passed){
+		console.log("PASSED")
 	}
 }
 
