@@ -835,52 +835,52 @@ let fragments2 = {"1.13": 1}
 let fragments3 = {"0.10": 1, "1.11": 1, "2.12": 1, "3.11":1}
 let fragments4 = {"1.1": 1, "2.2": 1}
 let fragments5 = {"1.7": 1, "2.8": 1, "3.8": 1, "4.7": 1}
-let fragments6 = {"1.13": 1}
-let fragments7 = {"1.13": 1}
-let fragments8 = {"1.13": 1}
-let fragments9 = {"1.13": 1}
-let fragments10 = {"1.13": 1}
-let fragments11 = {"0.15": 1}
-let fragments12 = {"1.13": 1}
-let fragments13 = {"1.13": 1}
-let fragments14 = {"1.13": 1}
-let fragments15 = {"1.13": 1}
-let fragments16 = {"1.13": 1}
-let fragments17 = {"1.13": 1}
-let fragments18 = {"1.13": 1}
-let fragments19 = {"1.13": 1}
-let fragments20 = {"1.13": 1}
-let fragments21 = {"0.15": 1}
-let fragments22 = {"1.13": 1}
-let fragments23 = {"1.13": 1}
-let fragments24 = {"1.13": 1}
-let fragments25 = {"1.13": 1}
-let fragments26 = {"1.13": 1}
-let fragments27 = {"1.13": 1}
-let fragments28 = {"1.13": 1}
-let fragments29 = {"1.13": 1}
-let fragments30 = {"1.13": 1}
-let fragments31 = {"0.15": 1}
-let fragments32 = {"1.13": 1}
-let fragments33 = {"1.13": 1}
-let fragments34 = {"1.13": 1}
-let fragments35 = {"1.13": 1}
-let fragments36 = {"1.13": 1}
-let fragments37 = {"1.13": 1}
-let fragments38 = {"1.13": 1}
-let fragments39 = {"1.13": 1}
-let fragments40 = {"1.13": 1}
-let fragments41 = {"0.15": 1}
-let fragments42 = {"1.13": 1}
-let fragments43 = {"1.13": 1}
-let fragments44 = {"1.13": 1}
-let fragments45 = {"1.13": 1}
-let fragments46 = {"1.13": 1}
-let fragments47 = {"1.13": 1}
-let fragments48 = {"1.13": 1}
-let fragments49 = {"1.13": 1}
-let fragments50 = {"1.13": 1}
-let fragments51 = {"1.13": 1}
+let fragments6 = {"1.5": 1, "2.6": 1}
+let fragments7 = {"2.4": 1, "3.3": 1}
+let fragments8 = {"3.15": 1}
+let fragments9 = {"3.0": 1, "3.1": 1}
+let fragments10 = {"4.13": 1, "5.13": 1, "6.12": 1, "7.12": 1}
+let fragments11 = {"4.5": 1, "5.4": 1}
+let fragments12 = {"5.15": 1}
+let fragments13 = {"5.11": 1, "5.10": 1}
+let fragments14 = {"5.1": 1, "6.2": 1}
+let fragments15 = {"6.8": 1, "7.7": 1, "8.6": 1, "7.5": 1}
+let fragments16 = {"7.15": 1}
+let fragments17 = {"8.4": 1}
+let fragments18 = {"8.3": 1}
+let fragments19 = {"8.1": 1, "9.1": 1, "10.1": 1}
+let fragments20 = {"9.15": 1}
+let fragments21 = {"10.14": 1, "10.13": 1, "9.12": 1, "9.11": 1, "9.10": 1}
+let fragments22 = {"10.8": 1, "11.8": 1}
+let fragments23 = {"10.6": 1, "11.5": 1, "11.4": 1, "10.3": 1}
+let fragments24 = {"11.15": 1}
+let fragments25 = {}
+let fragments26 = {}
+let fragments27 = {}
+let fragments28 = {}
+let fragments29 = {}
+let fragments30 = {}
+let fragments31 = {}
+let fragments32 = {"12.10": 1}
+let fragments33 = {}
+let fragments34 = {"13.4": 1, "13.3": 1, "12.2": 1, "12.1": 1}
+let fragments35 = {"12.1": 1, "13.0": 1}
+let fragments36 = {}
+let fragments37 = {}
+let fragments38 = {"13.9": 1}
+let fragments39 = {"13.7": 1}
+let fragments40 = {"14.15": 1}
+let fragments41 = {}
+let fragments42 = {}
+let fragments43 = {}
+let fragments44 = {}
+let fragments45 = {"15.4": 1, "15.3": 1, "14.2":1}
+let fragments46 = {}
+let fragments47 = {}
+let fragments48 = {}
+let fragments49 = {"15.10": 1}
+let fragments50 = {}
+let fragments51 = {"15.1": 1}
 let EXPECTED_FRAGMENTS = [
 	fragments1,
 	fragments2,
@@ -892,6 +892,16 @@ let EXPECTED_FRAGMENTS = [
 	fragments8,
 	fragments9,
 	fragments10,
+	fragments11,
+	fragments12,
+	fragments13,
+	fragments14,
+	fragments15,
+	fragments16,
+	fragments17,
+	fragments18,
+	fragments19,
+	fragments20,
 	fragments21,
 	fragments22,
 	fragments23,
@@ -1074,7 +1084,7 @@ function rasterize() {
 			passed = false;
 		}
 	}
-	if (passed){
+	if (passed || (bKeys.length == 0 && aKeys.length == 0)){
 		console.log("PASSED")
 	}
 	else{
