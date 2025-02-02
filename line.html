@@ -29,7 +29,7 @@ function getLineContext(vertexA, vertexB){
 	let dy = vertexB.y - vertexA.y;
 
 	var context = {
-		slope: dy / dx,
+		slope: dy == 0 && dx == 0 ? 0 : dy / dx,
 		vertexA: vertexA,
 		vertexB: vertexB
 	};
@@ -510,7 +510,7 @@ let PX_SIZE = 5.0;
 
 const VERTEX_RADIUS = 0.1;
 
-let vertexIndex = 0;
+let vertexIndex = 24;
 
 let test1 = [
 	{x: 0.5, y: 15.5},
