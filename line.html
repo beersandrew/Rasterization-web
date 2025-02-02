@@ -510,7 +510,7 @@ let PX_SIZE = 5.0;
 
 const VERTEX_RADIUS = 0.1;
 
-let vertexIndex = 24;
+let vertexIndex = 0;
 
 let test1 = [
 	{x: 0.5, y: 15.5},
@@ -1016,19 +1016,47 @@ window.addEventListener('mouseup', function(evt){
 
 let intervalId;
 
+
+function endTest(){
+	clearInterval(intervalId);
+	intervalId = null;
+	console.log("Test Results: ");
+	console.log("Passed: ", testResults.pass);
+	console.log("Failed: ", testResults.fail.length);
+	console.log("Failures: ", testResults.fail)
+}
+
 function nextTest(){
 	vertexIndex++;
 	if (vertexIndex == 51){
-		vertexIndex = 0;
+		endTest();
 	}
-	VERTICES = allVertices[vertexIndex];
-	VERTICES.dirty = true;
-	requestDraw();
+	else {
+		VERTICES = allVertices[vertexIndex];
+		VERTICES.dirty = true;
+		requestDraw();
+	}
 }
 
+let allTests = true;
+
 window.addEventListener('keydown', function(evt){
+	if (evt.key == 'a'){
+		allTests = true;
+		vertexIndex = -1;
+		testResults = {pass: 0, fail: []}
+		intervalId = setInterval(nextTest, 30);
+	}
+
+	if (evt.key == 'c'){
+		allTests = false;
+		vertexIndex = -1;
+		testResults = {pass: 0, fail: []}
+		intervalId = setInterval(nextTest, 30);
+	}
+
 	if (evt.key == 'n'){
-		intervalId = setInterval(nextTest, 500);
+		nextTest();
 	}
 
 	if (evt.key == 'q'){
@@ -1067,6 +1095,8 @@ resized();
 
 window.addEventListener('resize', resized);
 
+let testResults = {pass: 0, fail: []};
+
 function rasterize() {
 	delete VERTICES.dirty;
 
@@ -1094,7 +1124,7 @@ function rasterize() {
 		rasterize_line(va, vb, emit_fragment);
 	}
 
-	console.log("Test Start: ", vertexIndex + 1);
+	// console.log("Test Start: ", vertexIndex + 1);
 	
 
 	var aKeys = Object.keys(EXPECTED_FRAGMENTS[vertexIndex]).sort();
@@ -1107,12 +1137,18 @@ function rasterize() {
 		}
 	}
 	if (passed && (bKeys.length == aKeys.length)){
-		console.log("PASSED")
+		// console.log("PASSED")
+		testResults["pass"]++;
 	}
 	else{
-		console.error("FAILED")
-		console.error("Expected: ", EXPECTED_FRAGMENTS[vertexIndex])
-		console.error("Actual: ", FRAGMENTS)
+		// console.error("FAILED")
+		// console.error("Expected: ", EXPECTED_FRAGMENTS[vertexIndex])
+		// console.error("Actual: ", FRAGMENTS)
+		testResults.fail.push({index: vertexIndex, expected: EXPECTED_FRAGMENTS[vertexIndex], actual: FRAGMENTS})
+
+		if (!allTests){
+			endTest()
+		}
 	}
 }
 
@@ -1136,7 +1172,13 @@ function draw() {
 		const fragment = FRAGMENTS[key];
 		const R = 0.5;
 		if (fragment.count == 1) {
-			CTX.fillStyle = '#888';
+
+			if (!(key in EXPECTED_FRAGMENTS[vertexIndex])){
+				CTX.fillStyle = '#880';
+			}
+			else {
+				CTX.fillStyle = '#080';
+			}
 		} else {
 			let amt = 1.0 - Math.pow(0.9, fragment.count);
 			let R = (1.0 - 0.5) * amt + 0.5;
@@ -1145,6 +1187,16 @@ function draw() {
 			CTX.fillStyle = `rgb(${Math.round(255*R)},${Math.round(255*G)},${Math.round(255*B)})`;
 		}
 		CTX.fillRect(fragment.x-R, fragment.y-R, 2*R, 2*R);
+	}
+
+	for (const key in EXPECTED_FRAGMENTS[vertexIndex]) {
+		const R = 0.5;
+		if (!(key in FRAGMENTS)){
+			CTX.fillStyle = '#800';
+			var fragmentParts = key.split('.')
+			CTX.fillRect(fragmentParts[0], fragmentParts[1], 2*R, 2*R);
+		}
+
 	}
 
 	//diamonds:
