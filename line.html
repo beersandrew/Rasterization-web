@@ -1093,7 +1093,7 @@ function rasterize() {
 			passed = false;
 		}
 	}
-	if (passed || (bKeys.length == 0 && aKeys.length == 0)){
+	if (passed && (bKeys.length == aKeys.length)){
 		console.log("PASSED")
 	}
 	else{
