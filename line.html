@@ -1014,17 +1014,30 @@ window.addEventListener('mouseup', function(evt){
 	return false;
 });
 
+let intervalId;
+
+function nextTest(){
+	vertexIndex++;
+	if (vertexIndex == 51){
+		vertexIndex = 0;
+	}
+	VERTICES = allVertices[vertexIndex];
+	VERTICES.dirty = true;
+	requestDraw();
+}
+
 window.addEventListener('keydown', function(evt){
 	if (evt.key == 'n'){
-		vertexIndex++;
-		if (vertexIndex == 51){
-			vertexIndex = 0;
-		}
-		VERTICES = allVertices[vertexIndex];
-		VERTICES.dirty = true;
-		requestDraw();
+		intervalId = setInterval(nextTest, 500);
+	}
+
+	if (evt.key == 'q'){
+		clearInterval(intervalId);
+		intervalId = null;
 	}
 });
+
+
 
 
 function resized() {
