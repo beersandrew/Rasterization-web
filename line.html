@@ -115,12 +115,28 @@ function IsInsideDiamondFull(vertex, isIteratingX){
 
 	const manhattanDistance = xComponent + yComponent;
 
+
+	if (debug){
+		console.log("IsInsideDiamondFull:")
+		console.log("---------")
+	}
+
 	if (manhattanDistance < 0.5){
+		if (debug){
+			console.log("Distance is less than 0.5, we know we are inside, return true")
+		}
 		return true;
 	}
 
 	if (manhattanDistance == 0.5){
-		if (yComponent < 0){
+
+		if (debug){
+			console.log("Distance is exactly 0.5, we know we are on the edge, need to detect further")
+		}
+		if (yComponent == 0.5){
+			if (debug){
+				console.log("we are on the bottom of the diamond")
+			}
 			return true;
 		}
 		
@@ -246,21 +262,17 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 
 	if (AreInSamePixel(context.vertexA, context.vertexB)){
 
-		console.log("start and end in same pixel")
-
+		if (debug){
+			console.log("1: Vertices are in the same pixel, we won't iterate here.")
+		}
 		const vertexAManhattanDistance = GetManhattanDistance(context.vertexA);
 		const vertexBManhattanDistance = GetManhattanDistance(context.vertexB);
 
 		if (IsInsideDiamond(vertexAManhattanDistance) && IsInsideDiamond(vertexBManhattanDistance)){
-			console.log("both inside")
 			return;
 		}
 		else if (IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance)){
-			if (AreInSameQuadrant(context.vertexA, context.vertexB)){
-				console.log("both outside, do not cross")
-			}
-			else {
-				console.log("emitting")
+			if (!AreInSameQuadrant(context.vertexA, context.vertexB)){
 				try_emit(context.vertexA, emit_fragment);
 			}
 			return;
@@ -270,7 +282,6 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 			return;
 		}
 		else if ((IsOnDiamondLeft(context.vertexA) || IsOnDiamondLeft(context.vertexB)) && !context.iteratingX){
-			console.log("slope steep")
 			const pixelLeftOfVertexA = {x: context.vertexA.x - 1, y: context.vertexA.y}
 			try_emit(pixelLeftOfVertexA, emit_fragment);
 			return;
@@ -279,42 +290,104 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 			return;
 		}
 		else if (DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, vertexA)){
-			console.log("ONLY: CROSS - emit")
 			try_emit(context.vertexA, emit_fragment);
 			return;
 		}
 		else{
-			console.log("ONLY: no cross - same pixel")
 			return;
 		}
 	}
 
 	for(var current_a = Math.floor(context.iterating.start) + 0.5; current_a <= Math.floor(context.iterating.end) + 0.5; current_a++){
+
+		if (debug){
+			console.log("10: In our iteration loop")
+
+			console.log(`We are iterating across ${context.iteratingX ? 'X' : 'Y'}. Starting with ${current_a}.`)
+			console.log("-------")
+		}
 		var isFirstIteration = current_a == Math.floor(context.iterating.start) + 0.5;
 		var isLastIteration = (current_a + 1) > Math.floor(context.iterating.end) + 0.5;
 
 		if (isFirstIteration){
+			if (debug){
+				console.log("100: This is our first iteration.")
+			}
 			var isInside = IsInsideDiamondFull(context.vertexA, context.iteratingX);
 			var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
 
 			if (context.vertexA == vertexA){
 			
+				if (debug){
+					console.log("200: We are iterating in the same order as the line, aka this is the magenta or starting vertex.")
+				}
 				if (doesCrossLine || IsOnInsideEdgeAndExiting(context.vertexA, context.vertexB)){
+					if (debug){
+						if (doesCrossLine){
+							// TODO: this shouldnt work if start is outside and end is inside right?
+							console.log("300: Since we are starting in the pixel and we cross a line, we emit.")
+						}
+						
+						if (IsOnInsideEdgeAndExiting(context.vertexA, context.vertexB)){
+							console.log("400: Based on our edge detection calculation, we detected exiting this pixel.")
+						}
+					}
 					try_emit(context.vertexA, emit_fragment);
 				}
 				else {
-					const current_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
 
-					const vertex = context.iteratingX ? {x: current_a, y: current_b} : {x: current_b, y: current_a};
+					const current_b = context.slope * (current_a - context.iterating.start) + context.adjusting.start;
+					const rounded_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
+					const vertex = context.iteratingX ? {x: current_a, y: rounded_b} : {x: rounded_b, y: current_a};
+
+					if (debug){
+						console.log(`500: Since we did not cross a line, we run the 'normal' logic. Our calculated value was ${current_b}.`)
+						console.log(`600: With rounding our attempt will be at ${vertex.x}, ${vertex.y}.`)
+					}
 
 					if (!context.iteratingX && context.slope == 0 && context.vertexA.x == Math.floor(context.vertexA.x)){
 						vertex.x--;
+						if (debug){
+							console.log(`700: We detected a vertical line on the left border, this should switch the x value to the left.`)
+						}
 					}
 					try_emit(vertex, emit_fragment);
 				}
 			}
-			else if (!isInside && doesCrossLine){
-				try_emit(context.vertexA, emit_fragment);
+			else {
+				if (debug){
+					console.log("2000: We are iterating in the opposite order as the line, aka this is the last blue or ending vertex.")
+				}
+
+				if (!isInside && doesCrossLine){
+					if (debug){
+						console.log("3000: We are not inside the pixel AND we cross a diamond line, meaning we exited.")
+					}
+					try_emit(context.vertexA, emit_fragment);
+				}
+				else {
+					if (isInside){
+						if (debug){
+							console.log("4000: We are inside the diamond.")
+						}
+					}
+					else {
+						if (debug){
+							console.log("5000: We are not inside the diamond.")
+						}
+					}
+					
+					if (doesCrossLine){
+						if (debug){
+							console.log("6000: We do cross a diamond line.")
+						}
+					}
+					else {
+						if (debug){
+							console.log("6000: We do not cross a diamond line.")
+						}
+					}
+				}
 			}
 			
 			// if (DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA)){
@@ -354,22 +427,165 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 			// }
 		}
 		else if (isLastIteration){
+			if (debug){
+				console.log("100: This is our last iteration.")
+			}
 			var isInside = IsInsideDiamondFull(context.vertexB, context.iteratingX);
 			var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB);
 
 			if (context.vertexA == vertexA){
+
+				if (debug){
+					console.log("200: We are iterating in the same order as the line, aka this is the last blue or final vertex.")
+				}
 				if (!isInside && doesCrossLine){
+					if (debug){
+						console.log("3000: We are not inside the pixel AND we cross a diamond line, meaning we exited.")
+					}
 					try_emit(context.vertexB, emit_fragment);
+				}
+				else {
+
+					if (IsOnInsideEdgeAndExiting(vertexB, vertexA)){
+						if (debug){
+							console.log("3500: We are inside the diamond, and exiting, however this means we are inside and the last one, iteratingX")
+							console.log("3500: Since we only entered, we do not emit")
+						}
+					}
+					else {
+						if (isInside){
+							if (debug){
+								console.log("4000: We are inside the diamond.")
+							}
+						}
+						else {
+							if (debug){
+								console.log("5000: We are not inside the diamond.")
+							}
+						}
+						
+						if (doesCrossLine){
+							if (debug){
+								console.log("6000: We do cross a diamond line.")
+							}
+						}
+						else {
+							if (debug){
+								console.log("6000: We do not cross a diamond line.")
+							}
+						}
+
+						if (isInside && doesCrossLine){
+							if (debug){
+								console.log("7000: We are inside and we cross. This means we did not exit. do not emit.")
+							}
+						}
+						else{
+							const current_b = context.slope * (current_a - context.iterating.start) + context.adjusting.start;
+							const rounded_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
+							const vertex = context.iteratingX ? {x: current_a, y: rounded_b} : {x: rounded_b, y: current_a};
+
+							if (debug){
+								console.log(`500: Since we did not cross a line, we run the 'normal' logic. Our calculated value was ${current_b}.`)
+								console.log(`600: With rounding our attempt will be at ${vertex.x}, ${vertex.y}.`)
+								console.log("700: I assume this means since we are in the last iteration of a regular flow, we are iteratingX")
+								console.log("800: If we are iterating X and going forward it means this point is the right most point")
+								console.log("900: If this is the right most point, we should never emit a point more right than us, since we already did our exit check")
+							}
+
+							if (vertex.x > context.vertexB.x){
+								if (debug){
+									console.log("1000: We do not emit here since we would emit something too high")
+									console.log(`Calculated: ${vertex.y}, Actual Value: ${context.vertexA.y}, Other Value ${context.vertexB.y}`);
+								}
+							}
+							else {
+								if (debug){
+									console.log("1100: We are not too high, should emit")
+								}
+								if (!context.iteratingX && context.slope == 0 && context.vertexA.x == Math.floor(context.vertexA.x)){
+									vertex.x--;
+									if (debug){
+										console.log(`700: We detected a vertical line on the left border, this should switch the x value to the left.`)
+									}
+								}
+
+								try_emit(vertex, emit_fragment);
+							}
+						}
+					}
+					
+
+					
 				}
 				
 			}
 			else {
 				if (doesCrossLine || IsOnDiamondBottom(context.vertexB) || IsOnInsideEdgeAndExiting(context.vertexB, context.vertexA)){
 
+					if (debug){
+						if (doesCrossLine){
+							// TODO: this shouldnt work if start is outside and end is inside right?
+							console.log("300: Since we are starting in the pixel and we cross a line, we emit.")
+						}
+						
+						if (IsOnInsideEdgeAndExiting(context.vertexB, context.vertexA)){
+							console.log("400: Based on our edge detection calculation, we detected exiting this pixel.")
+						}
+
+						if (IsOnDiamondBottom(context.vertexB)){
+							console.log("500: We are on the bottom of a diamond, which always emits?.")
+						}
+					}
+
+
 					if (context.slope == 0 && context.vertexB.x == Math.floor(context.vertexB.x)){
+						if (debug){
+							console.log("600: We detected a vertical line on the left side of the pixel. Emit to the right.")
+						}
 						context.vertexB.x--;
 					}
+
 					try_emit(context.vertexB, emit_fragment);
+				}
+				else {
+					if (debug){
+						console.log("300: There is no logic here to handle an emission.")
+					}
+
+					const current_b = context.slope * (current_a - context.iterating.start) + context.adjusting.start;
+					const rounded_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
+					const vertex = context.iteratingX ? {x: current_a, y: rounded_b} : {x: rounded_b, y: current_a};
+
+					if (debug){
+						console.log(`500: Since we did not cross a line, we run the 'normal' logic. Our calculated value was ${current_b}.`)
+						console.log(`600: With rounding our attempt will be at ${vertex.x}, ${vertex.y}.`)
+						console.log("700: I assume this means since we are in the last iteration of a backwards flow, we are iteratingY")
+						console.log("800: If we are iterating Y and going backwards it means this point is the highest point")
+						console.log("900: If this is the highest point, we should never emit a point higher than us, since we already did our exit check")
+					}
+
+					if (vertex.y > context.vertexB.y){
+						if (debug){
+							console.log("1000: We do not emit here since we would emit something too high")
+							console.log(`Calculated: ${vertex.y}, Actual Value: ${context.vertexA.y}, Other Value ${context.vertexB.y}`);
+						}
+					}
+					else {
+						if (debug){
+							console.log("1100: We are not too high, should emit")
+						}
+						if (!context.iteratingX && context.slope == 0 && context.vertexA.x == Math.floor(context.vertexA.x)){
+							vertex.x--;
+							if (debug){
+								console.log(`700: We detected a vertical line on the left border, this should switch the x value to the left.`)
+							}
+						}
+
+						try_emit(vertex, emit_fragment);
+					}
+
+
 				}
 			}
 
@@ -415,12 +631,20 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 		}
 		else {
 
-			const current_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
+			const current_b = context.slope * (current_a - context.iterating.start) + context.adjusting.start;
+			const rounded_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
+			const vertex = context.iteratingX ? {x: current_a, y: rounded_b} : {x: rounded_b, y: current_a};
 
-			const vertex = context.iteratingX ? {x: current_a, y: current_b} : {x: current_b, y: current_a};
+			if (debug){
+				console.log(`500: Normal logic, not at start or end. Our calculated value was ${current_b}.`)
+				console.log(`600: With rounding our attempt will be at ${vertex.x}, ${vertex.y}.`)
+			}
 
 			if (!context.iteratingX && context.slope == 0 && context.vertexA.x == Math.floor(context.vertexA.x)){
 				vertex.x--;
+				if (debug){
+					console.log(`700: We detected a vertical line on the left border, this should switch the x value to the left.`)
+				}
 			}
 			try_emit(vertex, emit_fragment);
 		}
@@ -1020,6 +1244,10 @@ function endTest(){
 }
 
 function nextTest(){
+	if (debug){
+		console.log(`0: A NEW TEST\n`)
+		console.log(`--------`)
+	}
 	vertexIndex++;
 	if (vertexIndex == 51){
 		endTest();
@@ -1177,7 +1405,7 @@ function draw() {
 			let R = (1.0 - 0.5) * amt + 0.5;
 			let G = (0.0 - 0.3) * amt + 0.3;
 			let B = (0.0 - 0.3) * amt + 0.3;
-			CTX.fillStyle = `rgb(${Math.round(255*R)},${Math.round(255*G)},${Math.round(255*B)})`;
+			CTX.fillStyle = '#ff06b5';
 		}
 		CTX.fillRect(fragment.x-R, fragment.y-R, 2*R, 2*R);
 	}
