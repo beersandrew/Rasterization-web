@@ -68,10 +68,9 @@ function getLineContext(vertexA, vertexB){
 }
 
 function try_emit(vertex, emit_fragment){
-
-	var centerOfFragmentToEmit = {
-		x: Math.floor(vertex.x)+0.5, 
-		y: Math.floor(vertex.y)+0.5
+	const centerOfFragmentToEmit = {
+		x: Math.floor(vertex.x) + 0.5, 
+		y: Math.floor(vertex.y) + 0.5
 	};
 
 	const key = centerOfFragmentToEmit.x + "." + centerOfFragmentToEmit.y;
@@ -139,6 +138,28 @@ function IsInsideDiamondFull(vertex, isIteratingX){
 	return false;
 }
 
+
+function IsInsideDiamondNew(vertex){
+	const manhattanDistance = GetManhattanDistance(vertex);
+
+	if (manhattanDistance < 0.5){
+		return true;
+	}
+	else if (manhattanDistance > 0.5){
+		return false;
+	}
+
+	const diamondLines = GetDiamondLinesForPixel(vertex);
+
+	if (IsPointOnLine(vertex, diamondLines.bottomLeft) || IsPointOnLine(vertex, diamondLines.bottomRight)){
+		return true;
+	}
+
+	return false;
+}
+
+
+
 function IsInsideDiamond(manhattanDistance){
 	return manhattanDistance < 0.5
 }
@@ -168,7 +189,7 @@ function IsOnInsideEdgeAndExiting(vertexA, vertexB){
 			return true;
 		}
 		else {
-			if (IsInsideDiamond(GetManhattanDistance(vertexB))){
+			if (IsInsideDiamondNew(vertexB)){
 				return false;
 			}
 
@@ -312,27 +333,33 @@ function handleInitialLinePixel(context, current_a, try_emit, emit_fragment){
 	}
 }
 
+
+function tryRasterizeSinglePixel(context, emit_fragment){
+	const vertexAManhattanDistance = GetManhattanDistance(context.vertexA);
+	const vertexBManhattanDistance = GetManhattanDistance(context.vertexB);
+
+	if (IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance)){
+		if (!AreInSameQuadrant(context.vertexA, context.vertexB)){
+			try_emit(context.vertexA, emit_fragment);
+		}
+	}
+	else if ((context.iteratingStartToEnd && IsOnInsideEdgeAndExiting(context.vertexA, context.vertexB)) || 
+		(!context.iteratingStartToEnd && IsOnInsideEdgeAndExiting(context.vertexB, context.vertexA))){
+		try_emit(context.vertexA, emit_fragment);
+	}
+	else if ((IsOnDiamondLeft(context.vertexA) || IsOnDiamondLeft(context.vertexB)) && !context.iteratingX){
+		const pixelLeftOfVertexA = {x: context.vertexA.x - 1, y: context.vertexA.y}
+		try_emit(pixelLeftOfVertexA, emit_fragment);
+	}
+
+}
+
 function rasterize_line(vertexA, vertexB, emit_fragment) {
 
 	const context = getLineContext(vertexA, vertexB);
 
 	if (AreInSamePixel(context.vertexA, context.vertexB)){
-		const vertexAManhattanDistance = GetManhattanDistance(context.vertexA);
-		const vertexBManhattanDistance = GetManhattanDistance(context.vertexB);
-
-		if (IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance)){
-			if (!AreInSameQuadrant(context.vertexA, context.vertexB)){
-				try_emit(context.vertexA, emit_fragment);
-			}
-		}
-		else if (IsOnInsideEdgeAndExiting(vertexA, vertexB)){
-			try_emit(context.vertexA, emit_fragment);
-		}
-		else if ((IsOnDiamondLeft(context.vertexA) || IsOnDiamondLeft(context.vertexB)) && !context.iteratingX){
-			const pixelLeftOfVertexA = {x: context.vertexA.x - 1, y: context.vertexA.y}
-			try_emit(pixelLeftOfVertexA, emit_fragment);
-		}
-
+		tryRasterizeSinglePixel(context, emit_fragment);
 		return;
 	}
 
@@ -348,7 +375,6 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 				var isInside = IsInsideDiamondFull(context.vertexA, context.iteratingX);
 				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
 				if (!isInside && doesCrossLine){
-					
 					try_emit(context.vertexA, emit_fragment);
 				}
 				else if (IsOnDiamondLeft(context.vertexA) && context.iteratingX){
@@ -380,7 +406,6 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 			return;
 		}
 		else {
-			console.log("10");
 			bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
 		}
 	}
