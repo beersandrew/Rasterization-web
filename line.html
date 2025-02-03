@@ -203,20 +203,7 @@ function IsOnInsideEdgeAndExiting(vertexA, vertexB){
 
 function DoesLineCrossDiamond(rasterLine, vertex){
 	const diamondLines = GetDiamondLinesForPixel(vertex);
-
-	if (debug){
-		console.log("checking if line: ", rasterLine);
-		console.log("crosses: ", vertex);
-	}
-
-	if (debug){
-		console.log("BEFORE BOTTOM LEFT")
-	}
 	var bottomLeftResult = DoLinesCross(rasterLine, diamondLines.bottomLeft);
-
-	if (debug){
-		console.log("BEFORE BOTTOM RIGHT")
-	}
 	var bottomRightResult = DoLinesCross(rasterLine, diamondLines.bottomRight);
 
 	if (DoLinesCross(rasterLine, diamondLines.topLeft) || 
@@ -230,18 +217,10 @@ function DoesLineCrossDiamond(rasterLine, vertex){
 	var bottomRightResult = SolveForTandU(rasterLine, diamondLines.bottomRight);
 
 	if (bottomRightResult.u == 0 && Math.abs(bottomRightResult) < 1){
-		if (debug){
-			console.log("I assume this means we crossed the bottom most point, going diagonlly from the left corner")
-			console.log("we emit because this line is in, the left corner is out, so its a cross")
-		}
 		return true;
 	}
 
 	if (bottomLeftResult.u == 0 && Math.abs(bottomLeftResult) < 1){
-		if (debug){
-			console.log("I assume this means we crossed the bottom most point, going diagonlly from the right corner")
-			console.log("we emit because this line is in, the left corner is out, so its a cross")
-		}
 		return true;
 	}
 
@@ -268,9 +247,6 @@ function SolveForTandU(lineA, lineB){
 	const determinantAt = (lineB.end.x - lineB.start.x)*(lineB.start.y - lineA.start.y) - (lineB.start.x - lineA.start.x)*(lineB.end.y - lineB.start.y);
 	const determinantAu = (lineA.end.x - lineA.start.x)*(lineB.start.y - lineA.start.y) - (lineB.start.x - lineA.start.x)*(lineA.end.y - lineA.start.y);
 
-	if (debug){
-		console.log("checking: ", lineA, lineB)
-	}
 	return {
 		t: determinantAt / determinantA,
 		u: determinantAu / determinantA
@@ -279,9 +255,6 @@ function SolveForTandU(lineA, lineB){
 
 function DoLinesCross(lineA, lineB){
 	const intersectionResult = SolveForTandU(lineA, lineB);
-	if (debug){
-		console.log("RESULT: ", intersectionResult);
-	}
 	return intersectionResult.t > 0 && intersectionResult.t < 1 && intersectionResult.u > 0 && intersectionResult.u < 1;
 }
 
@@ -444,6 +417,12 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 					}
 					try_emit(context.vertexA, emit_fragment);
 				}
+				else if (IsOnDiamondLeft(context.vertexA) && context.iteratingX){
+					if (debug){
+						console.log("if we are on the very left of the diamond, it means we are NOT inside, and we should just run bresenhams")
+					}
+					bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
+				}
 				else {
 					if (isInside){
 						if (debug){
@@ -465,6 +444,10 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 						if (debug){
 							console.log("6000: We do not cross a diamond line.")
 						}
+					}
+
+					if (debug){
+						console.log("trying bresenham's")
 					}
 				}
 			}
@@ -496,6 +479,12 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 							console.log("3500: Since we only entered, we do not emit")
 						}
 					}
+					else if (IsOnDiamondLeft(context.vertexB) && context.slope != 0){
+						if (debug){
+							console.log("LAST: if we are on the very left of the diamond, it means we are NOT inside, and we should just run bresenhams")
+						}
+						bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
+					}
 					else {
 						if (isInside){
 							if (debug){
@@ -523,9 +512,6 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 							if (debug){
 								console.log("7000: We are inside and we cross. This means we did not exit. do not emit.")
 							}
-						}
-						else{
-							bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
 						}
 					}
 				}
