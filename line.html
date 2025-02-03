@@ -109,7 +109,7 @@ function GetManhattanDistance(vertex){
 	return xComponent + yComponent;
 }
 
-function IsInsideDiamondFull(vertex, isIteratingX){
+function IsInsideDiamond(vertex, isIteratingX){
 	const cx = Math.floor(vertex.x) + 0.5;
 	const xComponent = Math.abs(vertex.x - cx);
 	const cy = Math.floor(vertex.y) + 0.5;
@@ -120,48 +120,12 @@ function IsInsideDiamondFull(vertex, isIteratingX){
 	if (manhattanDistance < 0.5){
 		return true;
 	}
-
-	if (manhattanDistance == 0.5){
-		// Bottom of the diamond is always inside the diamond
-		if (yComponent == 0.5){
-			return true;
-		}
-		
-		// Right side of the diamond is inside only for y-major
-		if (!isIteratingX){
-			if (xComponent == 0.5){
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-
-function IsInsideDiamondNew(vertex){
-	const manhattanDistance = GetManhattanDistance(vertex);
-
-	if (manhattanDistance < 0.5){
-		return true;
-	}
-	else if (manhattanDistance > 0.5){
+	else if (manhattanDistance > 0.5 || vertex.x == Math.floor(vertex.x) || isIteratingX && xComponent == 0.5){
 		return false;
 	}
-
 	const diamondLines = GetDiamondLinesForPixel(vertex);
 
-	if (IsPointOnLine(vertex, diamondLines.bottomLeft) || IsPointOnLine(vertex, diamondLines.bottomRight)){
-		return true;
-	}
-
-	return false;
-}
-
-
-
-function IsInsideDiamond(manhattanDistance){
-	return manhattanDistance < 0.5
+	return (IsPointOnLine(vertex, diamondLines.bottomLeft) && vertex.x != 0 || IsPointOnLine(vertex, diamondLines.bottomRight));
 }
 
 function IsOnDiamond(manhattanDistance){
@@ -189,7 +153,7 @@ function IsOnInsideEdgeAndExiting(vertexA, vertexB){
 			return true;
 		}
 		else {
-			if (IsInsideDiamondNew(vertexB)){
+			if (IsInsideDiamond(vertexB)){
 				return false;
 			}
 
@@ -216,25 +180,14 @@ function DoesLineCrossDiamond(rasterLine, vertex){
 	var bottomLeftResult = DoLinesCross(rasterLine, diamondLines.bottomLeft);
 	var bottomRightResult = DoLinesCross(rasterLine, diamondLines.bottomRight);
 
-	if (DoLinesCross(rasterLine, diamondLines.topLeft) || 
+	var lineCompletelyCrossesDiamond = (DoLinesCross(rasterLine, diamondLines.topLeft) || 
 		DoLinesCross(rasterLine, diamondLines.topRight) || 
-		DoLinesCross(rasterLine, diamondLines.bottomLeft) || 
-		DoLinesCross(rasterLine, diamondLines.bottomRight)) {
-		return true;
-	}
+		bottomLeftResult || 
+		bottomRightResult);
 
-	var bottomLeftResult = SolveForTandU(rasterLine, diamondLines.bottomLeft);
-	var bottomRightResult = SolveForTandU(rasterLine, diamondLines.bottomRight);
+	var lineCrossesDiamondBasedOnEdgeRules =  (IsPointOnLine(vertex, diamondLines.bottomLeft) && vertex.x != Math.floor(vertex.x) || IsPointOnLine(vertex, diamondLines.bottomRight));
 
-	if (bottomRightResult.u == 0 && Math.abs(bottomRightResult) < 1){
-		return true;
-	}
-
-	if (bottomLeftResult.u == 0 && Math.abs(bottomLeftResult) < 1){
-		return true;
-	}
-
-	return false;
+	return lineCompletelyCrossesDiamond || lineCrossesDiamondBasedOnEdgeRules;
 }
 
 function GetDiamondLinesForPixel(vertex){
@@ -321,14 +274,11 @@ function bresenhamsCalculation(context, current_a, try_emit, emit_fragment){
 function handleInitialLinePixel(context, current_a, try_emit, emit_fragment){
 	// If we cross any line initially, it means we exited
 	var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
-	// If the point is on an edge that is considered to be inside the pixel, and moves outside, this counts as an exit
-	var exitedFromInsideEdge = IsOnInsideEdgeAndExiting(context.vertexA, context.vertexB)
 
-	if (doesCrossLine || exitedFromInsideEdge){
+	if (doesCrossLine){
 		try_emit(context.vertexA, emit_fragment);
 	}
 	else {
-		//TODO: why do we need this?
 		bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
 	}
 }
@@ -369,12 +319,20 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 
 		if (isFirstIteration){
 			if (context.iteratingStartToEnd){
-				handleInitialLinePixel(context, current_a, try_emit, emit_fragment)
+				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
+
+				if (doesCrossLine){
+					try_emit(context.vertexA, emit_fragment);
+				}
+				else {
+					bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
+				}
 			}
 			else {
-				var isInside = IsInsideDiamondFull(context.vertexA, context.iteratingX);
+				var isOutside = !IsInsideDiamond(context.vertexA, context.iteratingX);
 				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
-				if (!isInside && doesCrossLine){
+
+				if (isOutside && doesCrossLine){
 					try_emit(context.vertexA, emit_fragment);
 				}
 				else if (IsOnDiamondLeft(context.vertexA) && context.iteratingX){
@@ -385,17 +343,21 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 		}
 		else if (isLastIteration){
 			if (context.iteratingStartToEnd){
-				if (IsOnDiamondLeft(context.vertexB) && context.slope != 0){
-					// Being on the left side of the diamond means we are not inside, we run bresenham's here
+				var isOutside = !IsInsideDiamond(context.vertexB, context.iteratingX);
+				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB);
+
+				if (isOutside && doesCrossLine){
+					try_emit(context.vertexB, emit_fragment);
+				}
+				else if (IsOnDiamondLeft(context.vertexB) && context.iteratingX){
+					// if we are on the very left of the diamond, it means we are NOT inside, and we should just run bresenhams
 					bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
 				}
 			}
 			else {
-				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB);
-				if (doesCrossLine || IsOnDiamondBottom(context.vertexB) || IsOnInsideEdgeAndExiting(context.vertexB, context.vertexA)){
-					if (context.slope == 0 && context.vertexB.x == Math.floor(context.vertexB.x)){
-						context.vertexB.x--;
-					}
+				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexB, end: context.vertexA}, context.vertexB);
+
+				if (doesCrossLine){
 					try_emit(context.vertexB, emit_fragment);
 				}
 				else {
@@ -485,7 +447,7 @@ let PX_SIZE = 5.0;
 
 const VERTEX_RADIUS = 0.1;
 
-let vertexIndex = 10;
+let vertexIndex = 23;
 
 let test1 = [
 	{x: 0.5, y: 15.5},
@@ -662,7 +624,7 @@ let test33 = [
 
 let test34 = [
 	{x: 14.125, y: 5.25},
-	{x: 12.375, y: 2.125}
+	{x: 12.25, y: 2.125}
 ];
 
 let test35 = [
@@ -999,7 +961,9 @@ function endTest(){
 	console.log("Passed: ", testResults.pass);
 	console.log("Failed: ", testResults.fail.length);
 	console.log("Failures: ", testResults.fail)
-	vertexIndex = 50;
+	if (vertexIndex == 51){
+		vertexIndex = 50;
+	}
 }
 
 function nextTest(){
