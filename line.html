@@ -118,31 +118,17 @@ function IsInsideDiamondFull(vertex, isIteratingX){
 
 	const manhattanDistance = xComponent + yComponent;
 
-
-	if (debug){
-		console.log("IsInsideDiamondFull:")
-		console.log("---------")
-	}
-
 	if (manhattanDistance < 0.5){
-		if (debug){
-			console.log("Distance is less than 0.5, we know we are inside, return true")
-		}
 		return true;
 	}
 
 	if (manhattanDistance == 0.5){
-
-		if (debug){
-			console.log("Distance is exactly 0.5, we know we are on the edge, need to detect further")
-		}
+		// Bottom of the diamond is always inside the diamond
 		if (yComponent == 0.5){
-			if (debug){
-				console.log("we are on the bottom of the diamond")
-			}
 			return true;
 		}
 		
+		// Right side of the diamond is inside only for y-major
 		if (!isIteratingX){
 			if (xComponent == 0.5){
 				return true;
@@ -176,10 +162,6 @@ function IsOnInsideEdgeAndExiting(vertexA, vertexB){
 	const diamondLines = GetDiamondLinesForPixel(vertexA);
 	const vertexAOnBottomLeft = IsPointOnLine(vertexA, diamondLines.bottomLeft) && vertexA.y != diamondLines.bottomLeft.start.y;
 	const vertexAOnBottomRight = IsPointOnLine(vertexA, diamondLines.bottomRight);
-
-	if (debug){
-		console.log("IsOnInsideEdgeAndExiting: vertexAOnBottomLeft:", vertexAOnBottomLeft);
-	}
 
 	if (vertexAOnBottomLeft || vertexAOnBottomRight){
 		if (!AreInSamePixel(vertexA, vertexB)){
@@ -273,18 +255,11 @@ function IsOnDiamondLeft(vertex){
 	return vertex.x == Math.floor(vertex.x) && vertex.y == Math.floor(vertex.y) + 0.5;
 }
 
-
 function bresenhamsCalculation(context, current_a, try_emit, emit_fragment){
 
 	const current_b = context.slope * (current_a - context.iterating.start) + context.adjusting.start;
 	const rounded_b = Math.floor(context.slope * (current_a - context.iterating.start) + context.adjusting.start) + 0.5;
 	const vertex = context.iteratingX ? {x: current_a, y: rounded_b} : {x: rounded_b, y: current_a};
-
-
-	if (debug){
-		console.log(`500: Since we did not cross a line, we run the 'normal' logic. Our calculated value was ${current_b}.`)
-		console.log(`600: With rounding our attempt will be at ${vertex.x}, ${vertex.y}.`)
-	}
 
 	let boolSkip = false;
 	if (context.iteratingX){
@@ -313,25 +288,10 @@ function bresenhamsCalculation(context, current_a, try_emit, emit_fragment){
 
 
 	if (!boolSkip){
-		if (debug){
-			console.log("1100: We are not too high we can")
-		}
+		//  Steep line detection on the left border, this should switch the x value to the left
 		if (!context.iteratingX && current_b == Math.floor(current_b)){
 			vertex.x--;
-			if (debug){
-				console.log(`700: We detected a vertical line on the left border, this should switch the x value to the left.`)
-			}
 		}
-		else {
-			if(debug){
-				console.log("NOT on diamond left, so we don't shift left")
-			}
-		}
-
-		if (debug){
-			console.log("emitting: ", vertex.x, vertex.y)
-		}
-
 		
 		try_emit(vertex, emit_fragment);
 	}
@@ -343,28 +303,11 @@ function handleInitialLinePixel(context, current_a, try_emit, emit_fragment){
 	// If the point is on an edge that is considered to be inside the pixel, and moves outside, this counts as an exit
 	var exitedFromInsideEdge = IsOnInsideEdgeAndExiting(context.vertexA, context.vertexB)
 
-	if (debug){
-		console.log("200: We are iterating in the same order as the line, aka this is the magenta or starting vertex.")
-	}
 	if (doesCrossLine || exitedFromInsideEdge){
-		if (debug){
-			if (doesCrossLine){
-				// TODO: this shouldnt work if start is outside and end is inside right?
-				console.log("300: Since we are starting in the pixel and we cross a line, we emit.")
-			}
-			
-			if (exitedFromInsideEdge){
-				console.log("400: Based on our edge detection calculation, we detected exiting this pixel.")
-			}
-		}
-		console.log("1");
 		try_emit(context.vertexA, emit_fragment);
 	}
 	else {
 		//TODO: why do we need this?
-		if (debug){
-			console.log("in the initial starting point of the line, but running bresenham's")
-		}
 		bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
 	}
 }
@@ -374,199 +317,59 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 	const context = getLineContext(vertexA, vertexB);
 
 	if (AreInSamePixel(context.vertexA, context.vertexB)){
-
-		if (debug){
-			console.log("1: Vertices are in the same pixel, we won't iterate here.")
-		}
 		const vertexAManhattanDistance = GetManhattanDistance(context.vertexA);
 		const vertexBManhattanDistance = GetManhattanDistance(context.vertexB);
 
-		if (IsInsideDiamond(vertexAManhattanDistance) && IsInsideDiamond(vertexBManhattanDistance)){
-			return;
-		}
-		else if (IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance)){
+		if (IsOutsideDiamond(vertexAManhattanDistance) && IsOutsideDiamond(vertexBManhattanDistance)){
 			if (!AreInSameQuadrant(context.vertexA, context.vertexB)){
-				if (debug){
-					console.log("not in same quadrant,")
-				}
-				console.log("2");
 				try_emit(context.vertexA, emit_fragment);
 			}
-			return;
 		}
 		else if (IsOnInsideEdgeAndExiting(vertexA, vertexB)){
-			if (debug){
-				console.log("on bottom")
-			}
-			console.log("3");
 			try_emit(context.vertexA, emit_fragment);
-			return;
 		}
 		else if ((IsOnDiamondLeft(context.vertexA) || IsOnDiamondLeft(context.vertexB)) && !context.iteratingX){
-			if (debug){
-				console.log("on left")
-			}
 			const pixelLeftOfVertexA = {x: context.vertexA.x - 1, y: context.vertexA.y}
-			console.log("4");
 			try_emit(pixelLeftOfVertexA, emit_fragment);
-			return;
 		}
-		else{
-			return;
-		}
+
+		return;
 	}
 
 	for(var current_a = Math.floor(context.iterating.start) + 0.5; current_a <= Math.floor(context.iterating.end) + 0.5; current_a++){
-
-		if (debug){
-			console.log("10: In our iteration loop")
-
-			console.log(`We are iterating across ${context.iteratingX ? 'X' : 'Y'}. Starting with ${current_a}.`)
-			console.log("-------")
-		}
 		var isFirstIteration = current_a == Math.floor(context.iterating.start) + 0.5;
 		var isLastIteration = (current_a + 1) > Math.floor(context.iterating.end) + 0.5;
 
 		if (isFirstIteration){
-			if (debug){
-				console.log("100: This is our first iteration.")
-			}
-			var isInside = IsInsideDiamondFull(context.vertexA, context.iteratingX);
-			var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
-
-			if (context.vertexA == vertexA){
+			if (context.iteratingStartToEnd){
 				handleInitialLinePixel(context, current_a, try_emit, emit_fragment)
 			}
 			else {
-				if (debug){
-					console.log("2000: We are iterating in the opposite order as the line, aka this is the last blue or ending vertex.")
-				}
-
+				var isInside = IsInsideDiamondFull(context.vertexA, context.iteratingX);
+				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
 				if (!isInside && doesCrossLine){
-					if (debug){
-						console.log("3000: We are not inside the pixel AND we cross a diamond line, meaning we exited.")
-					}
-					console.log("6");
+					
 					try_emit(context.vertexA, emit_fragment);
 				}
 				else if (IsOnDiamondLeft(context.vertexA) && context.iteratingX){
-					if (debug){
-						console.log("if we are on the very left of the diamond, it means we are NOT inside, and we should just run bresenhams")
-					}
+					// if we are on the very left of the diamond, it means we are NOT inside, and we should just run bresenhams
 					bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
 				}
-				else {
-					if (isInside){
-						if (debug){
-							console.log("4000: We are inside the diamond.")
-						}
-					}
-					else {
-						if (debug){
-							console.log("5000: We are not inside the diamond.")
-						}
-					}
-					
-					if (doesCrossLine){
-						if (debug){
-							console.log("6000: We do cross a diamond line.")
-						}
-					}
-					else {
-						if (debug){
-							console.log("6000: We do not cross a diamond line.")
-						}
-					}
-
-					if (debug){
-						console.log("trying bresenham's")
-					}
-				}
 			}
-			
 		}
 		else if (isLastIteration){
-			if (debug){
-				console.log("100: This is our last iteration.")
-			}
-			var isInside = IsInsideDiamondFull(context.vertexB, context.iteratingX);
-			var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB);
-
-			if (context.vertexA == vertexA){
-				if (debug){
-					console.log("200: We are iterating in the same order as the line, aka this is the last blue or final vertex.")
-				}
-
-				if (IsOnInsideEdgeAndExiting(vertexB, vertexA)){
-					if (debug){
-						console.log("3500: We are inside the diamond, and exiting, however this means we are inside and the last one, iteratingX")
-						console.log("3500: Since we only entered, we do not emit")
-					}
-				}
-				else if (IsOnDiamondLeft(context.vertexB) && context.slope != 0){
-					if (debug){
-						console.log("LAST: if we are on the very left of the diamond, it means we are NOT inside, and we should just run bresenhams")
-					}
+			if (context.iteratingStartToEnd){
+				if (IsOnDiamondLeft(context.vertexB) && context.slope != 0){
+					// Being on the left side of the diamond means we are not inside, we run bresenham's here
 					bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
-				}
-				else {
-					if (isInside){
-						if (debug){
-							console.log("4000: We are inside the diamond.")
-						}
-					}
-					else {
-						if (debug){
-							console.log("5000: We are not inside the diamond.")
-						}
-					}
-					
-					if (doesCrossLine){
-						if (debug){
-							console.log("6000: We do cross a diamond line.")
-						}
-					}
-					else {
-						if (debug){
-							console.log("6000: We do not cross a diamond line.")
-						}
-					}
-
-					if (isInside && doesCrossLine){
-						if (debug){
-							console.log("7000: We are inside and we cross. This means we did not exit. do not emit.")
-						}
-					}
 				}
 			}
 			else {
-				// this
-				//handleInitialLinePixel(context, current_a, try_emit, emit_fragment)
+				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB);
 				if (doesCrossLine || IsOnDiamondBottom(context.vertexB) || IsOnInsideEdgeAndExiting(context.vertexB, context.vertexA)){
-
-					if (debug){
-						if (doesCrossLine){
-							// TODO: this shouldnt work if start is outside and end is inside right?
-							console.log("300: Since we are starting in the pixel and we cross a line, we emit.")
-						}
-						
-						if (IsOnInsideEdgeAndExiting(context.vertexB, context.vertexA)){
-							console.log("400: Based on our edge detection calculation, we detected exiting this pixel.")
-						}
-
-						if (IsOnDiamondBottom(context.vertexB)){
-							console.log("500: We are on the bottom of a diamond, which always emits?.")
-						}
-					}
-
-
 					if (context.slope == 0 && context.vertexB.x == Math.floor(context.vertexB.x)){
-						if (debug){
-							console.log("600: We detected a vertical line on the left side of the pixel. Emit to the right.")
-						}
 						context.vertexB.x--;
 					}
-					console.log("8");
 					try_emit(context.vertexB, emit_fragment);
 				}
 				else {
@@ -577,11 +380,10 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 			return;
 		}
 		else {
+			console.log("10");
 			bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
 		}
-	
 	}
-
 }
 
 </script>
@@ -1175,10 +977,6 @@ function endTest(){
 }
 
 function nextTest(){
-	if (debug){
-		console.log(`0: A NEW TEST\n`)
-		console.log(`--------`)
-	}
 	vertexIndex++;
 	if (vertexIndex == 51){
 		endTest();
