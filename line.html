@@ -17,8 +17,6 @@
 *
 */
 
-
-let debug = true;
 function getSlope(vertexA, vertexB){
 	const dx = vertexB.x - vertexA.x;
 	const dy = vertexB.y - vertexA.y;
@@ -283,7 +281,6 @@ function handleInitialLinePixel(context, current_a, try_emit, emit_fragment){
 	}
 }
 
-
 function tryRasterizeSinglePixel(context, emit_fragment){
 	const vertexAManhattanDistance = GetManhattanDistance(context.vertexA);
 	const vertexBManhattanDistance = GetManhattanDistance(context.vertexB);
@@ -304,8 +301,42 @@ function tryRasterizeSinglePixel(context, emit_fragment){
 
 }
 
-function rasterize_line(vertexA, vertexB, emit_fragment) {
+function tryRasterizeEndpoints(context, current_a, try_emit, emit_fragment){
+	const isFirstIteration = current_a == Math.floor(context.iterating.start) + 0.5;
+	const isLastIteration = (current_a + 1) > Math.floor(context.iterating.end) + 0.5;
 
+	if (isFirstIteration || isLastIteration){
+		const vertex = isFirstIteration ? context.vertexA : context.vertexB;
+
+		if (DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, vertex)){
+			if ((isFirstIteration && context.iteratingStartToEnd) || (!isFirstIteration && !context.iteratingStartToEnd)){
+				try_emit(vertex, emit_fragment);
+			}
+			else if (!IsInsideDiamond(vertex, context.iteratingX)){
+				try_emit(vertex, emit_fragment);
+			}
+			return true;
+		}
+		
+		// TODO: these cases are bad, it's basically like 'the left side of my pixel isn't actually in my pixel because it's part of the left pixel
+		// AND when we round and count by half pixels we get the following situation. A line starts at 0,0.5 relative to it's pixel and has a slope of 1
+		// In this case we actually start with the pixel above this, and we probably want to emit it
+
+		const sidePixelSituationStartToFinish = isFirstIteration && ((!context.iteratingStartToEnd && IsOnDiamondLeft(vertex) && context.iteratingX) || context.iteratingStartToEnd);
+		const sidePixelSituationFinishToStart = !isFirstIteration && ((context.iteratingStartToEnd && IsOnDiamondLeft(vertex) && context.iteratingX) || !context.iteratingStartToEnd);
+
+		// if we don't have the situations above, we want to skip
+		if (!sidePixelSituationStartToFinish && !sidePixelSituationFinishToStart){
+			return true;
+		}
+
+		return false;
+	}
+
+	return false;
+}
+
+function rasterize_line(vertexA, vertexB, emit_fragment) {
 	const context = getLineContext(vertexA, vertexB);
 
 	if (AreInSamePixel(context.vertexA, context.vertexB)){
@@ -314,58 +345,8 @@ function rasterize_line(vertexA, vertexB, emit_fragment) {
 	}
 
 	for(var current_a = Math.floor(context.iterating.start) + 0.5; current_a <= Math.floor(context.iterating.end) + 0.5; current_a++){
-		var isFirstIteration = current_a == Math.floor(context.iterating.start) + 0.5;
-		var isLastIteration = (current_a + 1) > Math.floor(context.iterating.end) + 0.5;
-
-		if (isFirstIteration){
-			if (context.iteratingStartToEnd){
-				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
-
-				if (doesCrossLine){
-					try_emit(context.vertexA, emit_fragment);
-				}
-				else {
-					bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
-				}
-			}
-			else {
-				var isOutside = !IsInsideDiamond(context.vertexA, context.iteratingX);
-				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexA);
-
-				if (isOutside && doesCrossLine){
-					try_emit(context.vertexA, emit_fragment);
-				}
-				else if (IsOnDiamondLeft(context.vertexA) && context.iteratingX){
-					// if we are on the very left of the diamond, it means we are NOT inside, and we should just run bresenhams
-					bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
-				}
-			}
-		}
-		else if (isLastIteration){
-			if (context.iteratingStartToEnd){
-				var isOutside = !IsInsideDiamond(context.vertexB, context.iteratingX);
-				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexA, end: context.vertexB}, context.vertexB);
-
-				if (isOutside && doesCrossLine){
-					try_emit(context.vertexB, emit_fragment);
-				}
-				else if (IsOnDiamondLeft(context.vertexB) && context.iteratingX){
-					// if we are on the very left of the diamond, it means we are NOT inside, and we should just run bresenhams
-					bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
-				}
-			}
-			else {
-				var doesCrossLine = DoesLineCrossDiamond({start: context.vertexB, end: context.vertexA}, context.vertexB);
-
-				if (doesCrossLine){
-					try_emit(context.vertexB, emit_fragment);
-				}
-				else {
-					bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
-				}
-			}
-
-			return;
+		if (tryRasterizeEndpoints(context, current_a, try_emit, emit_fragment)){
+			continue;
 		}
 		else {
 			bresenhamsCalculation(context, current_a, try_emit, emit_fragment);
@@ -447,7 +428,7 @@ let PX_SIZE = 5.0;
 
 const VERTEX_RADIUS = 0.1;
 
-let vertexIndex = 23;
+let vertexIndex = 9;
 
 let test1 = [
 	{x: 0.5, y: 15.5},
