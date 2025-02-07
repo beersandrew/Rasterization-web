@@ -16,36 +16,71 @@
  *  challenge: make it so that if two triangles meet at an edge, fragments on that edge are emitted by exactly one of the triangles
  *
  */
-function rasterize_triangle( va, vb, vc, emit_fragment ) {
-	//TODO: fill in this function
 
-	//This is a very bad placeholder implementation, just here so you see something by default.
-	//Don't actually do this!
-	//A good solution will loop over exactly the pixels that the triangle covers.
+
+function create_triangle_context(vertexA, vertexB, vertexC){
+
+	let context = {
+		start_x: 1,
+		end_x: 1,
+		start_y: 1,
+		end_y: 1
+	};
+
+
+	context.start_x = Math.floor(vertexA.x);
+	context.end_x = Math.ceil(vertexA.x);
+	context.start_y = Math.floor(vertexA.y);
+	context.end_y = Math.ceil(vertexA.y);
+
+	if (Math.floor(vertexB.x) < context.start_x){
+		context.start_x = Math.floor(vertexB.x);
+	}
+	if (Math.floor(vertexB.y) < context.start_y){
+		context.start_y = Math.floor(vertexB.y);
+	}
 	
-	//draw equally-spaced fragments in barycentric space:
-	for (let ai = 0; ai <= 5; ++ai) {
-		for (let bi = 0; bi + ai <= 5; ++bi) {
-			let ci = 5 - ai - bi;
+	if (Math.floor(vertexC.x) < context.start_x){
+		context.start_x = Math.floor(vertexC.x);
+	}
+	if (Math.floor(vertexC.y) < context.start_y){
+		context.start_y = Math.floor(vertexC.y);
+	}
+	
+	if (Math.ceil(vertexB.x) > context.end_x){
+		context.end_x = Math.ceil(vertexB.x);
+	}
+	if (Math.ceil(vertexB.y) > context.end_y){
+		context.end_y = Math.ceil(vertexB.y);
+	}
 
-			//from integer barycentric coords to floating-point:
-			let a = ai / 5.0;
-			let b = bi / 5.0;
-			let c = ci / 5.0;
+	if (Math.ceil(vertexC.x) > context.end_x){
+		context.end_x = Math.ceil(vertexC.x);
+	}
+	if (Math.ceil(vertexC.y) > context.end_y){
+		context.end_y = Math.ceil(vertexC.y);
+	}
 
-			//interpolate to get point in triangle:
-			const pt = {
-				x:a * va.x + b * vb.x + c * vc.x,
-				y:a * va.y + b * vb.y + c * vc.y
-			};
 
-			//px is the pixel containing pt:
-			const px = {
-				x:Math.floor(pt.x),
-				y:Math.floor(pt.y)
-			};
+	return context;
+}
 
-			emit_fragment(px.x+0.5, px.y+0.5);
+function rasterize_triangle( va, vb, vc, emit_fragment ) {
+
+	const context = create_triangle_context(va, vb, vc);
+
+	for (let x = context.start_x + 0.5; x < context.end_x + 0.5; x++){
+		for (let y = context.start_y + 0.5; y < context.end_y + 0.5; y++){
+			// Check if point is inside the triangle ( barycentric ? atan2 ?)
+
+			// If inside -> emit
+
+			// Check if is on a top or left edge
+
+			// if top or left -> emit
+
+
+			emit_fragment(x, y);
 		}
 	}
 }
