@@ -126,15 +126,46 @@ let PX_SIZE = 10.0;
 
 const VERTEX_RADIUS = 0.1;
 
+let vertexIndex = 0;
+
+let test1 = [
+	{x: 1, y: 7},
+	{x: 2, y: 4},
+	{x: 6, y: 6}
+];
+
+let triangles1 = [0,1,2]
+
+let fragments1 = {
+	"1.5": 1,
+	"1.6": 1,
+	"2.4": 1,
+	"2.5": 1,
+	"2.6": 1,
+	"3.5": 1,
+	"4.5": 1
+}
+
+
+let allVertices = [
+	test1
+]
+
+let allTriangles = [
+	triangles1
+]
+
+let EXPECTED_FRAGMENTS = [
+	fragments1
+]
+
 let VERTICES = [
-	{x: 3.5, y: 4.5},
-	{x: 6.5, y: 2.5},
-	{x: 12.5, y: 2.5},
-	{x: 8.5, y: 7.5}
+	{x: 1, y: 7},
+	{x: 2, y: 4},
+	{x: 6, y: 6}
 ];
 let TRIANGLES = [
-	[0,1,2],
-	[0,2,3]
+	[0,1,2]
 ];
 VERTICES.dirty = true; //dirty flag controls whether rasterize gets called next draw()
 
@@ -208,6 +239,60 @@ window.addEventListener('mouseup', function(evt){
 	return false;
 });
 
+let intervalId;
+
+
+function endTest(){
+	clearInterval(intervalId);
+	intervalId = null;
+	console.log("Test Results: ");
+	console.log("Passed: ", testResults.pass);
+	console.log("Failed: ", testResults.fail.length);
+	console.log("Failures: ", testResults.fail)
+	if (vertexIndex == 51){
+		vertexIndex = 50;
+	}
+}
+
+function nextTest(){
+	vertexIndex++;
+	if (vertexIndex == 51){
+		endTest();
+	}
+	else {
+		VERTICES = allVertices[vertexIndex];
+		VERTICES.dirty = true;
+		requestDraw();
+	}
+}
+
+let allTests = true;
+
+window.addEventListener('keydown', function(evt){
+	if (evt.key == 'a'){
+		allTests = true;
+		vertexIndex = -1;
+		testResults = {pass: 0, fail: []}
+		intervalId = setInterval(nextTest, 30);
+	}
+
+	if (evt.key == 'c'){
+		allTests = false;
+		vertexIndex = -1;
+		testResults = {pass: 0, fail: []}
+		intervalId = setInterval(nextTest, 30);
+	}
+
+	if (evt.key == 'n'){
+		nextTest();
+	}
+
+	if (evt.key == 'q'){
+		clearInterval(intervalId);
+		intervalId = null;
+	}
+});
+
 
 function resized() {
 	//resize the canvas's underlying context if its shape changes
@@ -263,6 +348,31 @@ function rasterize() {
 
 		rasterize_triangle(va, vb, vc, emit_fragment);
 	}
+
+
+	var aKeys = Object.keys(EXPECTED_FRAGMENTS[vertexIndex]).sort();
+  	var bKeys = Object.keys(FRAGMENTS).sort();
+
+	var passed = true;
+	for(var i = 0; i < aKeys.length; i++){
+		if (aKeys[i] != bKeys[i]){
+			passed = false;
+		}
+	}
+	if (passed && (bKeys.length == aKeys.length)){
+		// console.log("PASSED")
+		testResults["pass"]++;
+	}
+	else{
+		// console.error("FAILED")
+		// console.error("Expected: ", EXPECTED_FRAGMENTS[vertexIndex])
+		// console.error("Actual: ", FRAGMENTS)
+		testResults.fail.push({index: vertexIndex, expected: EXPECTED_FRAGMENTS[vertexIndex], actual: FRAGMENTS})
+
+		if (!allTests){
+			endTest()
+		}
+	}
 }
 
 function draw() {
@@ -288,25 +398,31 @@ function draw() {
 		const fragment = FRAGMENTS[key];
 		const R = 0.5;
 		if (fragment.count == 1) {
-			CTX.fillStyle = '#888';
+
+			if (!(key in EXPECTED_FRAGMENTS[vertexIndex])){
+				CTX.fillStyle = '#880';
+			}
+			else {
+				CTX.fillStyle = '#080';
+			}
 		} else {
 			let amt = 1.0 - Math.pow(0.9, fragment.count);
 			let R = (1.0 - 0.5) * amt + 0.5;
 			let G = (0.0 - 0.3) * amt + 0.3;
 			let B = (0.0 - 0.3) * amt + 0.3;
-			CTX.fillStyle = `rgb(${Math.round(255*R)},${Math.round(255*G)},${Math.round(255*B)})`;
+			CTX.fillStyle = '#ff06b5';
 		}
 		CTX.fillRect(fragment.x-R, fragment.y-R, 2*R, 2*R);
+	}
 
-		//bold 'x':
-		CTX.beginPath();
-		CTX.moveTo(fragment.x - XR, fragment.y - XR);
-		CTX.lineTo(fragment.x + XR, fragment.y + XR);
-		CTX.moveTo(fragment.x - XR, fragment.y + XR);
-		CTX.lineTo(fragment.x + XR, fragment.y - XR);
-		CTX.strokeStyle = '#000';
-		CTX.lineWidth = 2.0 * px;
-		CTX.stroke();
+	for (const key in EXPECTED_FRAGMENTS[vertexIndex]) {
+		const R = 0.5;
+		if (!(key in FRAGMENTS)){
+			CTX.fillStyle = '#800';
+			var fragmentParts = key.split('.')
+			CTX.fillRect(fragmentParts[0], fragmentParts[1], 2*R, 2*R);
+		}
+
 	}
 
 	//fragment centers:
