@@ -103,9 +103,7 @@ function sort_by_angle(a, b){
 }
 
 
-function orderPoints(vertexA, vertexB, vertexC){
-
-	let midpoint = {x: (vertexA.x + vertexB.x + vertexC.x) / 3.0, y: (vertexA.y + vertexB.y + vertexC.y) / 3.0 };
+function orderPoints(vertexA, vertexB, vertexC, midpoint){
 
 	vertexA.angle = getAngleOnUnitCircle(vertexA, midpoint);
 	vertexB.angle = getAngleOnUnitCircle(vertexB, midpoint);
@@ -128,18 +126,25 @@ function create_triangle_context(vertexA, vertexB, vertexC){
 		start: endpoints.start,
 		end: endpoints.end
 	};
-
-	let ordered_points = orderPoints(vertexA, vertexB, vertexC);
+	let midpoint = {x: (vertexA.x + vertexB.x + vertexC.x) / 3.0, y: (vertexA.y + vertexB.y + vertexC.y) / 3.0 };
+	let ordered_points = orderPoints(vertexA, vertexB, vertexC, midpoint);
 
 	context.vertexA = ordered_points.a;
 	context.vertexB = ordered_points.b;
 	context.vertexC = ordered_points.c;
 
 	context.AB = vector_subtract(context.vertexA, context.vertexB);
+	context.AB.is_on_top_or_left_edge = context.vertexC.x > midpoint.x || context.vertexA.y == context.vertexB.y;
 	context.BC = vector_subtract(context.vertexB, context.vertexC);
+	context.BC.is_on_top_or_left_edge == context.vertexA.x > midpoint.x && context.vertexB.y != context.vertexC.y;
 	context.CA = vector_subtract(context.vertexC, context.vertexA);
+	context.CA.is_on_top_or_left_edge = context.vertexB.x > midpoint.x;
 
 	return context;
+}
+
+function is_right_of(edge){
+	return edge.cross > 0 || edge.cross == 0 && edge.is_on_top_or_left_edge;
 }
 
 function is_inside(context, pixel){
@@ -147,13 +152,11 @@ function is_inside(context, pixel){
 	const BP = vector_subtract(context.vertexB, pixel);
 	const CP = vector_subtract(context.vertexC, pixel);
 
-	let cross_ap_ab = cross(AP, context.AB);
-	let cross_bp_bc = cross(BP, context.BC);
-	let cross_cp_ca = cross(CP, context.CA);
+	context.AB.cross = cross(AP, context.AB);
+	context.BC.cross = cross(BP, context.BC);
+	context.CA.cross = cross(CP, context.CA);
 
-
-	return cross_ap_ab > 0 && cross_bp_bc > 0 && cross_cp_ca > 0;
-
+	return is_right_of(context.AB) && is_right_of(context.BC) && is_right_of(context.CA);
 }	
 
 function rasterize_triangle( va, vb, vc, emit_fragment ) {
@@ -162,24 +165,11 @@ function rasterize_triangle( va, vb, vc, emit_fragment ) {
 
 	for (let x = context.start.x + 0.5; x < context.end.x + 0.5; x++){
 		for (let y = context.start.y + 0.5; y < context.end.y + 0.5; y++){
-			// Check if point is inside the triangle ( barycentric ? atan2 ?)
-
 			let pixel = {x: x, y: y};
-
-			
 
 			if (is_inside(context, pixel)){
 				emit_fragment(x, y);
 			}
-
-
-			// If inside -> emit
-
-			// Check if is on a top or left edge
-
-			// if top or left -> emit
-
-
 		}
 	}
 }
